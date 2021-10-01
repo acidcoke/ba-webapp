@@ -1,13 +1,13 @@
 # AWS S3 bucket for static hosting
 resource "aws_s3_bucket" "website" {
-  bucket = "${var.website_bucket_name}"
-  acl = "public-read"
+  bucket = var.website_bucket_name
+  acl    = "public-read"
 
   cors_rule {
     allowed_headers = ["*"]
-    allowed_methods = ["PUT","POST","GET"]
+    allowed_methods = ["PUT", "POST", "GET"]
     allowed_origins = ["*"]
-    expose_headers = ["ETag"]
+    expose_headers  = ["ETag"]
     max_age_seconds = 3000
   }
 
@@ -37,10 +37,10 @@ EOF
 # AWS S3 bucket for www-redirect
 resource "aws_s3_bucket" "website_redirect" {
   bucket = "www.${var.website_bucket_name}"
-  acl = "public-read"
+  acl    = "public-read"
 
   website {
-    redirect_all_requests_to = "${var.website_bucket_name}"
+    redirect_all_requests_to = var.website_bucket_name
   }
 }
 
