@@ -3,9 +3,9 @@ variable "aws_region" {
 }
 
 variable "domain_name" {
-  default = "headlesskiwi"
+  default = "headless.kiwi"
 }
 
 variable "website_bucket_name" {
-  default = "headlesskiwi"
+  default = "headless.kiwi"
 }
