@@ -18,7 +18,7 @@ resource "aws_s3_bucket" "website" {
     {
       "Sid": "PublicReadForGetBucketObjects",
       "Effect": "Allow",
-      "Principal": {
+      "Principal": { 
         "AWS": "*"
       },
       "Action": "s3:GetObject",
