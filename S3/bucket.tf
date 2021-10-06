@@ -18,11 +18,12 @@ resource "aws_s3_bucket" "website" {
     {
       "Sid": "PublicReadForGetBucketObjects",
       "Effect": "Allow",
-      "Principal": { 
+      "Principal": {
         "AWS": "*"
       },
       "Action": "s3:GetObject",
       "Resource": "arn:aws:s3:::${var.website_bucket_name}/*"
+      
     }
   ]
 }
