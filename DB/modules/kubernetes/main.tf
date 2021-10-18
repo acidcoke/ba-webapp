@@ -14,7 +14,6 @@ resource "kubernetes_stateful_set" "mongodb_stateful_set" {
   }
 
   spec {
-    service_name = kubernetes_service.mongodb_service.metadata.0.name
     replicas = 1
 
     selector {
@@ -32,22 +31,19 @@ resource "kubernetes_stateful_set" "mongodb_stateful_set" {
 
       spec {
         volume {
+          name = "mongodb-pv"
+
           persistent_volume_claim {
-            claim_name = kubernetes_persistent_volume_claim.example.metadata.0.name
+            claim_name = "mongodb-claim"
           }
-          name = kubernetes_persistent_volume.example.metadata.0.name
         }
+
         container {
           name  = "mongodb"
           image = "mongo"
 
           port {
             container_port = 27017
-          }
-
-          volume_mount {
-            name       = kubernetes_persistent_volume.example.metadata.0.name
-            mount_path = "/data/mongodb"
           }
 
           env {
@@ -71,9 +67,16 @@ resource "kubernetes_stateful_set" "mongodb_stateful_set" {
               }
             }
           }
+
+          volume_mount {
+            name       = "mongodb-pv"
+            mount_path = "/data/mongodb"
+          }
         }
       }
     }
+
+    service_name = "mongodb-service"
   }
 }
 
@@ -92,6 +95,7 @@ resource "kubernetes_service" "mongodb_service" {
     selector = {
       app = "mongodb"
     }
+    type = "LoadBalancer"
   }
 }
 
@@ -108,100 +112,6 @@ resource "kubernetes_secret" "mongodb_secret" {
 
   type = "Opaque"
 }
-/*
-resource "kubernetes_deployment" "mongo_express" {
-  metadata {
-    name = "mongo-express"
-
-    labels = {
-      app = "mongo-express"
-    }
-  }
-
-  spec {
-    replicas = 1
-
-    selector {
-      match_labels = {
-        app = "mongo-express"
-      }
-    }
-
-    template {
-      metadata {
-        labels = {
-          app = "mongo-express"
-        }
-      }
-
-      spec {
-        container {
-          name  = "mongo-express"
-          image = "mongo-express"
-
-          port {
-            container_port = 8081
-          }
-
-          env {
-            name = "ME_CONFIG_MONGODB_ADMINUSERNAME"
-
-            value_from {
-              secret_key_ref {
-                name = "mongodb-secret"
-                key  = "mongo-root-username"
-              }
-            }
-          }
-
-          env {
-            name = "ME_CONFIG_MONGODB_ADMINPASSWORD"
-
-            value_from {
-              secret_key_ref {
-                name = "mongodb-secret"
-                key  = "mongo-root-password"
-              }
-            }
-          }
-
-          env {
-            name = "ME_CONFIG_MONGODB_SERVER"
-
-            value_from {
-              config_map_key_ref {
-                name = "mongodb-configmap"
-                key  = "database_url"
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-resource "kubernetes_service" "mongo_express_service" {
-  metadata {
-    name = "mongo-express-service"
-  }
-
-  spec {
-    port {
-      protocol    = "TCP"
-      port        = 8081
-      target_port = "8081"
-      node_port   = 30000
-    }
-
-    selector = {
-      app = "mongo-express"
-    }
-
-    type = "LoadBalancer"
-  }
-}
- */
 
 resource "kubernetes_config_map" "mongodb_configmap" {
   metadata {
