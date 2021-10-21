@@ -13,7 +13,7 @@ client = MongoClient(MONGO_URI)
 
 def handler(event, context):
     print(event)
-    db = client.get_default_database()
+    db = client.get_database()
     if client:
         if event['resource'] == USER_RESOURCE:
             if event['httpMethod'] == GET:

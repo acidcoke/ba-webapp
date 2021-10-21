@@ -44,11 +44,11 @@ resource "aws_lambda_function" "hello_world" {
 
   role = aws_iam_role.lambda_exec.arn
 
-/*   environment {
+   environment {
     variables = {
       MONGO_URI = var.mongo_uri
     }
-  } */
+  }
 }
 
 resource "aws_cloudwatch_log_group" "hello_world" {

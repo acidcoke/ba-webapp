@@ -9,3 +9,7 @@ variable "domain_name" {
 variable "website_bucket_name" {
   default = "headless.kiwi"
 }
+
+variable "mongo_uri" {
+  default = ""
+}

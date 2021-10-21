@@ -4,12 +4,6 @@ module "eks" {
   cluster_version = "1.20"
   subnets         = module.vpc.private_subnets
 
-  tags = {
-    Environment = "training"
-    GithubRepo  = "terraform-aws-eks"
-    GithubOrg   = "terraform-aws-modules"
-  }
-
   vpc_id = module.vpc.vpc_id
 
   workers_group_defaults = {
@@ -18,7 +12,7 @@ module "eks" {
 
   worker_groups = [
     {
-      name                          = "worker-group-1"
+      name                          = "ba-worker-group-1"
       instance_type                 = "t2.micro"
       additional_userdata           = "echo foo bar"
       # changes can only be applied on a destroyed cluster, otherwise kubernetes errors
@@ -26,7 +20,7 @@ module "eks" {
       additional_security_group_ids = [aws_security_group.worker_group_mgmt_one.id]
     },
     {
-      name                          = "worker-group-2"
+      name                          = "ba-worker-group-2"
       instance_type                 = "t2.small"
       additional_userdata           = "echo foo bar"
       additional_security_group_ids = [aws_security_group.worker_group_mgmt_two.id]
