@@ -122,7 +122,7 @@ resource "aws_apigatewayv2_stage" "lambda" {
   }
 }
 
-resource "aws_apigatewayv2_integration" "hello_world" {
+resource "aws_apigatewayv2_integration" "post" {
   api_id = aws_apigatewayv2_api.lambda.id
 
   integration_uri    = aws_lambda_function.hello_world.invoke_arn
@@ -130,20 +130,33 @@ resource "aws_apigatewayv2_integration" "hello_world" {
   integration_method = "POST"
 }
 
+resource "aws_apigatewayv2_route" "create_entries" {
+  api_id = aws_apigatewayv2_api.lambda.id
 
-resource "aws_apigatewayv2_route" "get_user" {
+  route_key = "POST /entries"
+  target    = "integrations/${aws_apigatewayv2_integration.post.id}"
+}
+resource "aws_apigatewayv2_integration" "get" {
+  api_id = aws_apigatewayv2_api.lambda.id
+
+  integration_uri    = aws_lambda_function.hello_world.invoke_arn
+  integration_type   = "AWS_PROXY"
+  integration_method = "POST"
+}
+resource "aws_apigatewayv2_route" "get_entries" {
   api_id = aws_apigatewayv2_api.lambda.id
 
   route_key = "GET /entries"
-  target    = "integrations/${aws_apigatewayv2_integration.hello_world.id}"
+  target    = "integrations/${aws_apigatewayv2_integration.get.id}"
 }
 
-resource "aws_apigatewayv2_route" "create_user" {
+resource "aws_apigatewayv2_route_response" "no_entries" {
   api_id = aws_apigatewayv2_api.lambda.id
+  route_id = aws_apigatewayv2_route.get_user.id
 
-  route_key = "POST /users"
-  target    = "integrations/${aws_apigatewayv2_integration.hello_world.id}"
+  route_response_key = "/204/"
 }
+
 
 resource "aws_cloudwatch_log_group" "api_gw" {
   name = "/aws/api_gw/${aws_apigatewayv2_api.lambda.name}"
