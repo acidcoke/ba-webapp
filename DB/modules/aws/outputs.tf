@@ -44,5 +44,5 @@ output "cluster_ca_certificate" {
 }
 
 output "efs_example_fsid" {
-  value = aws_efs_file_system.example.id
+  value = aws_efs_file_system.ba-efs.id
 }

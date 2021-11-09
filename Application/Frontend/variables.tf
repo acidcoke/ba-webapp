@@ -11,5 +11,5 @@ variable "website_bucket_name" {
 }
 
 variable "mongo_uri" {
-  default = ""
+  default = "mongodb://username:password@ad3a417b4b4d84d618e8dd8e6775fdc3-1076869512.eu-central-1.elb.amazonaws.com"
 }
