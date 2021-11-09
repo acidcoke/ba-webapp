@@ -6,7 +6,7 @@ import uuid
 
 from pymongo import MongoClient
 
-MONGO_URI = os.environment.get('MONGO_URI')
+MONGO_URI = os.environ.get('MONGO_URI')
 
 ENTRIES_RESOURCE = '/entries'
 GET = 'GET'
@@ -16,7 +16,8 @@ client = MongoClient(MONGO_URI)
 
 def handler(event, context):
     print(event)
-    logging.info(db = client.get_database())
+    #db = client.get_database()
+    logging.info(event)
     if client:
         if event['resource'] == ENTRIES_RESOURCE and event['httpMethod']:
             httpMethod = event['httpMethod']
@@ -24,7 +25,9 @@ def handler(event, context):
                 if isEmpty():
                     return response(None, 204)
                 else:
-                    return response(None, 200)
+                    entry=json.dumps([{'author': 'bla','comment':'hhh'},{'author': 'Peter','comment':'I,m back Fuckerooniessimulationen überhauptetentierten Herrenhaus-Aktivisten und der Berichteten der Anscan den Kriegskurs einer Anschließlich gegen des Internetcafess20/1.html Copyright  1996-2002 Mit der hläge !'}])
+                    logging.info(entry)
+                    return respond(entry, 200)
             elif httpMethod == POST:
                 pass
             else:
@@ -32,7 +35,7 @@ def handler(event, context):
             
 
 def isEmpty():
-    return true
+    return False
 
 def respond(entries, statusCode):
     if statusCode==200:

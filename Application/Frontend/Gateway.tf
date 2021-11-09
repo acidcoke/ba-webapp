@@ -37,13 +37,13 @@ resource "aws_lambda_function" "hello_world" {
   s3_bucket = aws_s3_bucket.lambda_bucket.id
   s3_key    = aws_s3_bucket_object.lambda_hello_world.key
 
-  runtime = "python3.6"
+  runtime = "python3.7"
   handler = "hello.handler"
 
   source_code_hash = data.archive_file.lambda_hello_world.output_base64sha256
 
   role = aws_iam_role.lambda_exec.arn
-  layers = [aws_lambda_layer_version.python36-pymongo-layer.arn]
+  layers = [aws_lambda_layer_version.python37-pymongo-layer.arn]
 
    environment {
     variables = {
@@ -52,11 +52,11 @@ resource "aws_lambda_function" "hello_world" {
   }
 }
 
-resource "aws_lambda_layer_version" "python36-pymongo-layer" {
+resource "aws_lambda_layer_version" "python37-pymongo-layer" {
   filename            = "pymongo_layer.zip"
-  layer_name          = "Python36-pymongo"
+  layer_name          = "Python37-pymongo"
   source_code_hash    = "${filebase64sha256("pymongo_layer.zip")}"
-  compatible_runtimes = ["python3.6", "python3.7"]
+  compatible_runtimes = ["python3.7"]
   compatible_architectures = [ "x86_64" ]
 }
 
@@ -148,13 +148,6 @@ resource "aws_apigatewayv2_route" "get_entries" {
 
   route_key = "GET /entries"
   target    = "integrations/${aws_apigatewayv2_integration.get.id}"
-}
-
-resource "aws_apigatewayv2_route_response" "no_entries" {
-  api_id = aws_apigatewayv2_api.lambda.id
-  route_id = aws_apigatewayv2_route.get_user.id
-
-  route_response_key = "/204/"
 }
 
 
