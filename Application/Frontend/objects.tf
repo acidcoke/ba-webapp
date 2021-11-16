@@ -1,8 +1,8 @@
 resource "aws_s3_bucket_object" "object" {
   bucket = aws_s3_bucket.website.id
   key    = "index.html"
-  source = "${path.module}/index.html"
-  source_hash = filebase64sha256("index.html")
+  source = "${path.module}/website/index.html"
+  source_hash = filebase64sha256("website/index.html")
   content_type = "text/html"
 }
 

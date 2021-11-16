@@ -95,6 +95,10 @@ resource "aws_iam_role_policy_attachment" "lambda_policy" {
 resource "aws_apigatewayv2_api" "lambda" {
   name          = "serverless_lambda_gw"
   protocol_type = "HTTP"
+  cors_configuration {
+    allow_origins=["*"]
+    allow_methods=["*"]
+  }
 }
 
 resource "aws_apigatewayv2_stage" "lambda" {
@@ -136,18 +140,11 @@ resource "aws_apigatewayv2_route" "create_entries" {
   route_key = "POST /entries"
   target    = "integrations/${aws_apigatewayv2_integration.post.id}"
 }
-resource "aws_apigatewayv2_integration" "get" {
-  api_id = aws_apigatewayv2_api.lambda.id
-
-  integration_uri    = aws_lambda_function.hello_world.invoke_arn
-  integration_type   = "AWS_PROXY"
-  integration_method = "POST"
-}
 resource "aws_apigatewayv2_route" "get_entries" {
   api_id = aws_apigatewayv2_api.lambda.id
 
   route_key = "GET /entries"
-  target    = "integrations/${aws_apigatewayv2_integration.get.id}"
+  target    = "integrations/${aws_apigatewayv2_integration.post.id}"
 }
 
 
