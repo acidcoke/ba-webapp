@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import time
 import datetime
 
 from pymongo import MongoClient
@@ -39,7 +40,9 @@ def handler(event, context):
 
     if event['httpMethod'] == POST:
         entry=json.loads(event['body'])
-        entry["date"]=datetime.datetime.utcnow
+        logging.info(datetime.datetime.utcnow())
+        entry["date"]=time.time()
+        logging.info(entry)
         entries.insert_one(entry)
         return {
             "statusCode": 201,

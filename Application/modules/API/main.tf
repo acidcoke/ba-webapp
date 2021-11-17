@@ -59,7 +59,7 @@ resource "aws_lambda_function" "hello_world" {
 resource "aws_lambda_layer_version" "python37-pymongo-layer" {
   filename            = "pymongo_layer.zip"
   layer_name          = "Python37-pymongo"
-  source_code_hash    = "${filebase64sha256("pymongo_layer.zip")}"
+  source_code_hash    = "${filebase64sha256("${path.module}/hello-world/pymongo_layer.zip")}"
   compatible_runtimes = ["python3.7"]
   compatible_architectures = [ "x86_64" ]
 }
