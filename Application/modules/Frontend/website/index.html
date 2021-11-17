@@ -1,22 +1,106 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Titel der Seite | Name der Website</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Ajax 3 - External API</title>
+  <style>
+    .user {
+      display: flex;
+      background: #f4f4f4;
+      padding: 5px;
+      margin-bottom: 10px;
+    }
+
+    .user ul {
+      list-style: none;
+    }
+
+    .p1 {
+      font-family: "Times New Roman", Times, serif;
+      color: #7bcab1;
+    }
+  </style>
 </head>
 
 <body>
-    <!-- Sichtbarer Dokumentinhalt im body -->
-    <p>Sehen Sie sich den Quellcode dieser Seite an.
-        <kbd>(Kontextmenu: Seitenquelltext anzeigen)</kbd>
-    </p>
-    <form action="${url}/user" method="get">
-        <label for="name">First name:</label>
-        <input type="text" id="name" name="name"><br><br>
-        <button type="submit">Submit</button>
-    </form>
+  <div id="demo"></div>
+  <br><br>
+  <h1>Guestbook</h1>
+  <form>
+    <label for="name">Name:</label><br>
+    <input type="text" id="name" name="name"><br>
+    <label for="lname">Comment:</label><br>
+    <input type="text" id="comment" name="comment"><br><br>
+    <input type="submit" value="Submit">
+  </form> 
+  <button type="button" id="b1">Request data</button>
+  <div id="users"></div>
+  <button id="button">Load GitHub Users</button>
+
+
+  <script>
+    document.getElementById('button').addEventListener('click', loadEntries);
+    document.getElementById('b1').addEventListener('click', addEntry);
+    window.onload = loadEntries();
+    // Load Github Users
+
+    function addEntry() {
+      const xhttp = new XMLHttpRequest();
+      xhttp.onload = function () {
+        current=document.getElementById('users').innerHTML;
+        current='<div class="user">' +
+              '<ul>' +
+              '<li>' + comment + '</li>' +
+
+              '<hr> ' +
+              '<li><div class="p1">' + author + '</div></li>' +
+              '</ul>' +
+              '</div>' + current;
+              document.getElementById('users').innerHTML = current;
+      }
+      xhttp.open('POST', 'https://y1u2hockx4.execute-api.eu-central-1.amazonaws.com/serverless_lambda_stage/entries', true);
+      author=document.getElementById('name').value;
+      comment=document.getElementById('comment').value;
+      xhttp.send('{"author":"'+author+'","comment":"'+comment+'"}');
+      
+    }
+
+    function loadEntries() {
+      var xhr = new XMLHttpRequest();
+
+      xhr.open('GET',    'https://y1u2hockx4.execute-api.eu-central-1.amazonaws.com/serverless_lambda_stage/entries', true);
+
+      xhr.onload = function () {
+        if (this.status == 202) {
+          var users = JSON.parse(this.responseText);
+          var output = '';
+          users.forEach(user => {
+            var utcSeconds = user['date'];
+            var date = new Date(0); // The 0 there is the key, which sets the date to the epoch
+            date.setUTCSeconds(utcSeconds);
+            date=date.toLocaleDateString()+
+              ' ' +date.getHours()+
+              ':' +date.getMinutes()
+            console.log(utcSeconds);
+            output = 
+              '<div class="user">' +
+              '<ul>' +
+              user['comment'] + '</li>' +
+              '<hr> ' +
+              '<li><div class="p1">' + user['author'] + ' | ' + date + '</div></li>' +
+              '</ul>' +
+              '</div>' + output;
+          });
+          
+          document.getElementById('users').innerHTML = output;
+        }
+      }
+      xhr.send();
+    }
+  </script>
 </body>
 
 </html>
