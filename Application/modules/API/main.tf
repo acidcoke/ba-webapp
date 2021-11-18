@@ -32,7 +32,19 @@ resource "aws_s3_bucket_object" "lambda_hello_world" {
   etag = filemd5(data.archive_file.lambda_hello_world.output_path)
 }
 
+data "aws_secretsmanager_secret" "mongo_secret" {
+  arn = var.mongo_secret
+}
 
+data "aws_secretsmanager_secret_version" "mongo_credentials" {
+  secret_id = data.aws_secretsmanager_secret.mongo_secret.arn
+}
+
+locals {
+  db_creds = jsondecode(
+    data.aws_secretsmanager_secret_version.mongo_credentials.secret_string
+  )
+}
 # create lambda function
 
 resource "aws_lambda_function" "hello_world" {
@@ -51,15 +63,20 @@ resource "aws_lambda_function" "hello_world" {
 
    environment {
     variables = {
-      MONGO_URI = var.mongo_uri
+      MONGO_URI = local.mongo_uri
     }
   }
 }
 
+locals {
+  mongo_credentials = jsondecode(data.aws_secretsmanager_secret_version.mongo_credentials.secret_string)
+  mongo_uri = "mongodb://${local.mongo_credentials["username"]}:${local.mongo_credentials["password"]}@${var.mongodb_ingress_hostname}"
+}
+
 resource "aws_lambda_layer_version" "python37-pymongo-layer" {
-  filename            = "pymongo_layer.zip"
+  filename            = "${path.module}/pymongo_layer.zip"
   layer_name          = "Python37-pymongo"
-  source_code_hash    = "${filebase64sha256("${path.module}/hello-world/pymongo_layer.zip")}"
+  source_code_hash    = "${filebase64sha256("${path.module}/pymongo_layer.zip")}"
   compatible_runtimes = ["python3.7"]
   compatible_architectures = [ "x86_64" ]
 }
@@ -138,16 +155,20 @@ resource "aws_apigatewayv2_integration" "post" {
   integration_method = "POST"
 }
 
+locals {
+  resource_path = "/entries"
+}
+
 resource "aws_apigatewayv2_route" "create_entries" {
   api_id = aws_apigatewayv2_api.lambda.id
 
-  route_key = "POST /entries"
+  route_key = "POST ${local.resource_path}"
   target    = "integrations/${aws_apigatewayv2_integration.post.id}"
 }
 resource "aws_apigatewayv2_route" "get_entries" {
   api_id = aws_apigatewayv2_api.lambda.id
 
-  route_key = "GET /entries"
+  route_key = "GET ${local.resource_path}"
   target    = "integrations/${aws_apigatewayv2_integration.post.id}"
 }
 

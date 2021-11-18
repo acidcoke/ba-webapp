@@ -1,3 +1,8 @@
+output "mongo_secret" {
+  value = aws_secretsmanager_secret.mongo_secret.arn
+}
+
+
 output "cluster_id" {
   description = "EKS cluster ID."
   value       = module.eks.cluster_id

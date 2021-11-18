@@ -16,3 +16,7 @@ variable "cluster_ca_certificate" {
 variable "efs_example_fsid" {
   type = string
 }
+
+variable "mongo_secret" {
+  
+}

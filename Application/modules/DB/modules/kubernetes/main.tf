@@ -1,3 +1,12 @@
+variable "region" {
+  default     = "eu-central-1"
+  description = "AWS region"
+}
+
+provider "aws" {
+  region = var.region
+}
+
 provider "kubernetes" {
   host                   = var.cluster_endpoint
   token                  = var.cluster_auth_token
@@ -99,6 +108,20 @@ resource "kubernetes_service" "mongodb_service" {
   }
 }
 
+data "aws_secretsmanager_secret" "mongo_secret" {
+  arn = var.mongo_secret
+}
+
+data "aws_secretsmanager_secret_version" "mongo_credentials" {
+  secret_id = data.aws_secretsmanager_secret.mongo_secret.arn
+}
+
+locals {
+  mongo_creds = jsondecode(
+    data.aws_secretsmanager_secret_version.mongo_credentials.secret_string
+  )
+}
+
 resource "kubernetes_secret" "mongodb_secret" {
 
   metadata {
@@ -106,11 +129,10 @@ resource "kubernetes_secret" "mongodb_secret" {
   }
 
   data = {
-    mongo-root-password = "password"
-    mongo-root-username = "username"
+    mongo-root-password = local.mongo_creds["password"]
+    mongo-root-username = local.mongo_creds["username"]
   }
 
-  type = "Opaque"
 }
 
 resource "kubernetes_config_map" "mongodb_configmap" {

@@ -10,6 +10,5 @@ variable "website_bucket_name" {
   default = "headless.kiwi"
 }
 
-variable "base_url" {
-  description = "Base URL for API Gateway stage."
+variable "api_route" {
 }

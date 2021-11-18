@@ -10,6 +10,7 @@ module "kubernetes" {
   cluster_ca_certificate = module.aws.cluster_ca_certificate
 
   efs_example_fsid = module.aws.efs_example_fsid
+  mongo_secret = module.aws.mongo_secret
 }
 
 module "helm" {
