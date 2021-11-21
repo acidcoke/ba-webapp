@@ -24,20 +24,17 @@ resource "kubernetes_stateful_set" "mongodb_stateful_set" {
 
   spec {
     replicas = 1
-
     selector {
       match_labels = {
         app = "mongodb"
       }
     }
-
     template {
       metadata {
         labels = {
           app = "mongodb"
         }
       }
-
       spec {
         volume {
           name = "mongodb-pv"
@@ -46,18 +43,14 @@ resource "kubernetes_stateful_set" "mongodb_stateful_set" {
             claim_name = "mongodb-claim"
           }
         }
-
         container {
           name  = "mongodb"
           image = "mongo"
-
           port {
             container_port = 27017
           }
-
           env {
             name = "MONGO_INITDB_ROOT_USERNAME"
-
             value_from {
               secret_key_ref {
                 name = "mongodb-secret"
@@ -65,10 +58,8 @@ resource "kubernetes_stateful_set" "mongodb_stateful_set" {
               }
             }
           }
-
           env {
             name = "MONGO_INITDB_ROOT_PASSWORD"
-
             value_from {
               secret_key_ref {
                 name = "mongodb-secret"
@@ -76,7 +67,6 @@ resource "kubernetes_stateful_set" "mongodb_stateful_set" {
               }
             }
           }
-
           volume_mount {
             name       = "mongodb-pv"
             mount_path = "/data/mongodb"
@@ -108,20 +98,6 @@ resource "kubernetes_service" "mongodb_service" {
   }
 }
 
-data "aws_secretsmanager_secret" "mongo_secret" {
-  arn = var.mongo_secret
-}
-
-data "aws_secretsmanager_secret_version" "mongo_credentials" {
-  secret_id = data.aws_secretsmanager_secret.mongo_secret.arn
-}
-
-locals {
-  mongo_creds = jsondecode(
-    data.aws_secretsmanager_secret_version.mongo_credentials.secret_string
-  )
-}
-
 resource "kubernetes_secret" "mongodb_secret" {
 
   metadata {
@@ -135,17 +111,7 @@ resource "kubernetes_secret" "mongodb_secret" {
 
 }
 
-resource "kubernetes_config_map" "mongodb_configmap" {
-  metadata {
-    name = "mongodb-configmap"
-  }
-
-  data = {
-    database_url = "mongodb-service"
-  }
-}
-
-resource "kubernetes_persistent_volume" "example" {
+resource "kubernetes_persistent_volume" "storage" {
   metadata {
     name = "mongodb-pv"
   }
@@ -159,14 +125,13 @@ resource "kubernetes_persistent_volume" "example" {
     persistent_volume_source {
       csi {
         driver = "efs.csi.aws.com"
-        volume_handle = var.efs_example_fsid
+        volume_handle = var.efs_storage_fsid
       }
     }
-    
   }
 }
 
-resource "kubernetes_persistent_volume_claim" "example" {
+resource "kubernetes_persistent_volume_claim" "storage" {
 
   metadata {
     name = "mongodb-claim"
@@ -179,6 +144,20 @@ resource "kubernetes_persistent_volume_claim" "example" {
         storage = "1Gi"
       }
     }
-    volume_name = kubernetes_persistent_volume.example.metadata.0.name
+    volume_name = kubernetes_persistent_volume.storage.metadata.0.name
   }
+}
+
+data "aws_secretsmanager_secret" "mongo_secret" {
+  arn = var.mongo_secret
+}
+
+data "aws_secretsmanager_secret_version" "mongo_credentials" {
+  secret_id = data.aws_secretsmanager_secret.mongo_secret.arn
+}
+
+locals {
+  mongo_creds = jsondecode(
+    data.aws_secretsmanager_secret_version.mongo_credentials.secret_string
+  )
 }
