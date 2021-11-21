@@ -125,7 +125,7 @@ resource "kubernetes_persistent_volume" "storage" {
     persistent_volume_source {
       csi {
         driver = "efs.csi.aws.com"
-        volume_handle = var.efs_storage_fsid
+        volume_handle = var.efs_example_fsid
       }
     }
   }

@@ -17,13 +17,13 @@ module "eks" {
       additional_userdata           = "echo foo bar"
       # changes can only be applied on a destroyed cluster, otherwise kubernetes errors
       asg_desired_capacity          = 1
-      additional_security_group_ids = [aws_security_group.worker_group_mgmt_one.id]
+      additional_security_group_ids = [aws_security_group.worker_mgmt.id]
     },
     {
       name                          = "ba-worker-group-2"
       instance_type                 = "t2.small"
       additional_userdata           = "echo foo bar"
-      additional_security_group_ids = [aws_security_group.worker_group_mgmt_two.id]
+      additional_security_group_ids = [aws_security_group.worker_mgmt.id]
       asg_desired_capacity          = 1
     },
   ]

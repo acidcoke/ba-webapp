@@ -47,6 +47,18 @@ locals {
 }
 # create lambda function
 
+
+data "aws_subnet_ids" "vpc" {
+  vpc_id = var.vpc_id
+}
+
+data "aws_security_groups" "vpc" {
+  filter {
+    name   = "vpc-id"
+    values = [var.vpc_id]
+  }
+}
+
 resource "aws_lambda_function" "hello_world" {
   function_name = "HelloWorld"
 
@@ -58,10 +70,14 @@ resource "aws_lambda_function" "hello_world" {
 
   source_code_hash = data.archive_file.lambda_hello_world.output_base64sha256
 
-  role = aws_iam_role.lambda_exec.arn
+  role   = aws_iam_role.lambda_exec.arn
   layers = [aws_lambda_layer_version.python37-pymongo-layer.arn]
+  vpc_config {
+    subnet_ids         = data.aws_subnet_ids.vpc.ids
+    security_group_ids = data.aws_security_groups.vpc.ids
+  }
 
-   environment {
+  environment {
     variables = {
       MONGO_URI = local.mongo_uri
     }
@@ -70,15 +86,15 @@ resource "aws_lambda_function" "hello_world" {
 
 locals {
   mongo_credentials = jsondecode(data.aws_secretsmanager_secret_version.mongo_credentials.secret_string)
-  mongo_uri = "mongodb://${local.mongo_credentials["username"]}:${local.mongo_credentials["password"]}@${var.mongodb_ingress_hostname}"
+  mongo_uri         = "mongodb://${local.mongo_credentials["username"]}:${local.mongo_credentials["password"]}@${var.mongodb_ingress_hostname}"
 }
 
 resource "aws_lambda_layer_version" "python37-pymongo-layer" {
-  filename            = "${path.module}/pymongo_layer.zip"
-  layer_name          = "Python37-pymongo"
-  source_code_hash    = "${filebase64sha256("${path.module}/pymongo_layer.zip")}"
-  compatible_runtimes = ["python3.7"]
-  compatible_architectures = [ "x86_64" ]
+  filename                 = "${path.module}/pymongo_layer.zip"
+  layer_name               = "Python37-pymongo"
+  source_code_hash         = filebase64sha256("${path.module}/pymongo_layer.zip")
+  compatible_runtimes      = ["python3.7"]
+  compatible_architectures = ["x86_64"]
 }
 
 resource "aws_cloudwatch_log_group" "hello_world" {
@@ -117,8 +133,8 @@ resource "aws_apigatewayv2_api" "lambda" {
   name          = "serverless_lambda_gw"
   protocol_type = "HTTP"
   cors_configuration {
-    allow_origins=["*"]
-    allow_methods=["*"]
+    allow_origins = ["*"]
+    allow_methods = ["*"]
   }
 }
 

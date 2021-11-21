@@ -2,6 +2,9 @@ output "mongo_secret" {
   value = aws_secretsmanager_secret.mongo_secret.arn
 }
 
+output "vpc_id" {
+  value = module.vpc.vpc_id
+}
 
 output "cluster_id" {
   description = "EKS cluster ID."

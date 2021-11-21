@@ -17,3 +17,7 @@ variable "mongodb_ingress_hostname" {
 variable "mongo_secret" {
   
 }
+
+variable "vpc_id" {
+  
+}

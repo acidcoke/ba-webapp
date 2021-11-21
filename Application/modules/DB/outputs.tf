@@ -6,3 +6,7 @@ output "mongodb_ingress_hostname" {
 output "mongo_secret" {
   value = module.aws.mongo_secret
 }
+
+output "vpc_id" {
+  value = module.aws.vpc_id
+}

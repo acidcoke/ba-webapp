@@ -10,3 +10,10 @@ resource "aws_efs_mount_target" "private" {
   subnet_id       = module.vpc.private_subnets[count.index]
   security_groups = [aws_security_group.efs.id]
 }
+
+resource "aws_efs_backup_policy" "efs" {
+  file_system_id = aws_efs_file_system.ba-efs.id
+  backup_policy {
+    status = "ENABLED"
+  }
+}
