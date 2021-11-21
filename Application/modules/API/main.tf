@@ -48,14 +48,24 @@ locals {
 # create lambda function
 
 
-data "aws_subnet_ids" "vpc" {
-  vpc_id = var.vpc_id
-}
-
-data "aws_security_groups" "vpc" {
+data "aws_subnets" "private" {
   filter {
     name   = "vpc-id"
     values = [var.vpc_id]
+  }
+
+  tags = {
+    type = "private"
+  }
+}
+
+resource "aws_security_group" "lambda" {
+  vpc_id = var.vpc_id
+  egress {
+    from_port        = 27017
+    to_port          = 27017
+    protocol         = "TCP"
+    cidr_blocks      = ["0.0.0.0/0"]
   }
 }
 
@@ -73,8 +83,8 @@ resource "aws_lambda_function" "hello_world" {
   role   = aws_iam_role.lambda_exec.arn
   layers = [aws_lambda_layer_version.python37-pymongo-layer.arn]
   vpc_config {
-    subnet_ids         = data.aws_subnet_ids.vpc.ids
-    security_group_ids = data.aws_security_groups.vpc.ids
+    subnet_ids         = data.aws_subnets.private.ids
+    security_group_ids = [aws_security_group.lambda.id]
   }
 
   environment {
@@ -123,6 +133,11 @@ resource "aws_iam_role" "lambda_exec" {
 resource "aws_iam_role_policy_attachment" "lambda_policy" {
   role       = aws_iam_role.lambda_exec.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "iam_role_policy_attachment_lambda_vpc_access_execution" {
+  role       = aws_iam_role.lambda_exec.id
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
 

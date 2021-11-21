@@ -22,11 +22,13 @@ module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "3.2.0"
 
-  name                 = "ba-vpc"
-  cidr                 = "10.0.0.0/16"
-  azs                  = data.aws_availability_zones.available.names
-  private_subnets      = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  enable_dns_hostnames = true
+  name               = "ba-vpc"
+  cidr               = "10.0.0.0/16"
+  azs                = data.aws_availability_zones.available.names
+  private_subnets    = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  public_subnets     = ["10.0.4.0/24"]
+  enable_nat_gateway = true
+  single_nat_gateway = true
   tags = {
     "kubernetes.io/cluster/${local.cluster_name}" = "shared"
   }
@@ -37,6 +39,7 @@ module "vpc" {
   }
 
   private_subnet_tags = {
+    "type"                                        = "private"
     "kubernetes.io/cluster/${local.cluster_name}" = "shared"
     "kubernetes.io/role/internal-elb"             = "1"
   }
@@ -45,7 +48,9 @@ module "vpc" {
 resource "aws_security_group" "worker_mgmt" {
   name_prefix = "worker_management"
   vpc_id      = module.vpc.vpc_id
-  
+
+
+
   egress {
     from_port        = 0
     to_port          = 0

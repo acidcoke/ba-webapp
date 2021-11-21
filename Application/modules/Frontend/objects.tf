@@ -6,5 +6,5 @@ resource "aws_s3_bucket_object" "object" {
 }
 
 locals {
-  content = templatefile("${path.module}/templates/index.html", { url = var.api_route })
+  content = templatefile("${path.module}/template/index.html", { url = var.api_route })
 }

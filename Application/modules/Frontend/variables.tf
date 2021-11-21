@@ -11,4 +11,5 @@ variable "website_bucket_name" {
 }
 
 variable "api_route" {
+  default = ""
 }
