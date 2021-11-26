@@ -135,6 +135,7 @@ resource "kubernetes_persistent_volume_claim" "storage" {
   }
   spec {
     access_modes = ["ReadWriteOnce"]
+    storage_class_name = "efs-sc"
     resources {
       requests = {
         storage = "1Gi"
@@ -145,7 +146,7 @@ resource "kubernetes_persistent_volume_claim" "storage" {
 }
 
 data "aws_secretsmanager_secret_version" "mongo_credentials" {
-  secret_id = data.aws_secretsmanager_secret.mongo_secret.arn
+  secret_id = var.mongo_secret
 }
 
 locals {
