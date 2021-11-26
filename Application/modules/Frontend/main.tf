@@ -1,3 +1,7 @@
+provider "aws" {
+  region = var.aws_region
+}
+
 # AWS S3 bucket for static hosting
 resource "aws_s3_bucket" "website" {
   bucket = var.website_bucket_name
@@ -44,14 +48,13 @@ resource "aws_s3_bucket" "website_redirect" {
   }
 }
 
-output "website" {
-  value = aws_s3_bucket.website.website
+resource "aws_s3_bucket_object" "object" {
+  bucket       = aws_s3_bucket.website.id
+  content      = local.content
+  key          = "index.html"
+  content_type = "text/html"
 }
 
-output "website_domain" {
-  value = aws_s3_bucket.website.website_domain
-}
-
-output "website_endpoint" {
-  value = aws_s3_bucket.website.website_endpoint
+locals {
+  content = templatefile("${path.module}/template/index.html", { url = var.api_route })
 }

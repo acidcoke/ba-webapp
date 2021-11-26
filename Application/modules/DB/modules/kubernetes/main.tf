@@ -16,7 +16,6 @@ provider "kubernetes" {
 resource "kubernetes_stateful_set" "mongodb_stateful_set" {
   metadata {
     name = "mongodb-stateful-set"
-
     labels = {
       app = "mongodb"
     }
@@ -38,7 +37,6 @@ resource "kubernetes_stateful_set" "mongodb_stateful_set" {
       spec {
         volume {
           name = "mongodb-pv"
-
           persistent_volume_claim {
             claim_name = "mongodb-claim"
           }
@@ -74,7 +72,6 @@ resource "kubernetes_stateful_set" "mongodb_stateful_set" {
         }
       }
     }
-
     service_name = "mongodb-service"
   }
 }
@@ -124,7 +121,7 @@ resource "kubernetes_persistent_volume" "storage" {
     access_modes = ["ReadWriteOnce"]
     persistent_volume_source {
       csi {
-        driver = "efs.csi.aws.com"
+        driver        = "efs.csi.aws.com"
         volume_handle = var.efs_example_fsid
       }
     }
@@ -138,7 +135,6 @@ resource "kubernetes_persistent_volume_claim" "storage" {
   }
   spec {
     access_modes = ["ReadWriteOnce"]
-    storage_class_name = "efs-sc"
     resources {
       requests = {
         storage = "1Gi"
@@ -146,10 +142,6 @@ resource "kubernetes_persistent_volume_claim" "storage" {
     }
     volume_name = kubernetes_persistent_volume.storage.metadata.0.name
   }
-}
-
-data "aws_secretsmanager_secret" "mongo_secret" {
-  arn = var.mongo_secret
 }
 
 data "aws_secretsmanager_secret_version" "mongo_credentials" {
@@ -160,4 +152,26 @@ locals {
   mongo_creds = jsondecode(
     data.aws_secretsmanager_secret_version.mongo_credentials.secret_string
   )
+}
+
+
+provider "helm" {
+  kubernetes {
+    host = var.cluster_endpoint
+
+    cluster_ca_certificate = var.cluster_ca_certificate
+    token                  = var.cluster_auth_token
+  }
+}
+
+resource "helm_release" "kubernetes_efs_csi_driver" {
+  name       = "aws-efs-csi-driver"
+  chart      = "aws-efs-csi-driver"
+  repository = "https://kubernetes-sigs.github.io/aws-efs-csi-driver/"
+  version    = "1.2.4"
+
+  set {
+    name  = "serviceAccount.name"
+    value = "aws-efs-csi-driver"
+  }
 }
