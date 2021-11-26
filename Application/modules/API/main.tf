@@ -5,8 +5,8 @@ provider "aws" {
 data "archive_file" "lambda_hello_world" {
   type = "zip"
 
-  source_dir  = "${path.module}/hello-world"
-  output_path = "${path.module}/hello-world.zip"
+  source_dir  = "${path.module}/code"
+  output_path = "${path.module}/code.zip"
 }
 
 
@@ -50,10 +50,10 @@ resource "aws_security_group" "lambda" {
 resource "aws_lambda_function" "hello_world" {
   function_name = "HelloWorld"
 
-  filename = "${path.module}/hello-world.zip"
+  filename = "${path.module}/code.zip"
 
   runtime = "python3.7"
-  handler = "hello.handler"
+  handler = "api.handler"
 
   source_code_hash = data.archive_file.lambda_hello_world.output_base64sha256
 
