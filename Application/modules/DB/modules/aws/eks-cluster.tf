@@ -10,24 +10,23 @@ module "eks" {
     root_volume_type = "gp2"
   }
 
+      # changes can only be applied on a destroyed cluster, otherwise kubernetes errors
   worker_groups = [
     {
       name                          = "ba-worker-group-1"
       instance_type                 = "t2.micro"
-      additional_userdata           = "echo foo bar"
-      # changes can only be applied on a destroyed cluster, otherwise kubernetes errors
       asg_desired_capacity          = 1
       additional_security_group_ids = [aws_security_group.worker_mgmt.id]
     },
     {
       name                          = "ba-worker-group-2"
       instance_type                 = "t2.small"
-      additional_userdata           = "echo foo bar"
       additional_security_group_ids = [aws_security_group.worker_mgmt.id]
       asg_desired_capacity          = 1
     },
   ]
 }
+
 
 data "aws_eks_cluster" "cluster" {
   name = module.eks.cluster_id

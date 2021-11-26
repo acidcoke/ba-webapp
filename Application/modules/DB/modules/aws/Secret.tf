@@ -6,12 +6,7 @@ resource "random_password" "password" {
   override_special = "_%@"
 }
 
-
-# Now create secret and secret versions for database master account 
-
 resource "aws_secretsmanager_secret" "mongo_secret" {
-  name = "mongo_creds"
-  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "mongo_secret_version" {

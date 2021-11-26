@@ -22,13 +22,14 @@ module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "3.2.0"
 
-  name               = "ba-vpc"
-  cidr               = "10.0.0.0/16"
-  azs                = data.aws_availability_zones.available.names
-  private_subnets    = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  public_subnets     = ["10.0.4.0/24"]
-  enable_nat_gateway = true
-  single_nat_gateway = true
+  name                 = "ba-vpc"
+  cidr                 = "10.0.0.0/16"
+  azs                  = data.aws_availability_zones.available.names
+  private_subnets      = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  public_subnets       = ["10.0.4.0/24"]
+  enable_nat_gateway   = true
+  single_nat_gateway   = true
+  enable_dns_hostnames = true
   tags = {
     "kubernetes.io/cluster/${local.cluster_name}" = "shared"
   }
@@ -49,8 +50,6 @@ resource "aws_security_group" "worker_mgmt" {
   name_prefix = "worker_management"
   vpc_id      = module.vpc.vpc_id
 
-
-
   egress {
     from_port        = 0
     to_port          = 0
@@ -59,6 +58,16 @@ resource "aws_security_group" "worker_mgmt" {
     ipv6_cidr_blocks = ["::/0"]
   }
 }
+
+/* resource "aws_security_group" "lambda" {
+  vpc_id = var.vpc_id
+  egress {
+    from_port        = 27017
+    to_port          = 27017
+    protocol         = "TCP"
+    cidr_blocks      = ["0.0.0.0/0"]
+  }
+} */
 
 resource "aws_security_group" "efs" {
   name_prefix = "efs"
@@ -70,9 +79,7 @@ resource "aws_security_group" "efs" {
     protocol  = "tcp"
 
     cidr_blocks = [
-      "10.0.0.0/8",
-      "172.16.0.0/12",
-      "192.168.0.0/16",
+      "10.0.0.0/16"
     ]
   }
 }
