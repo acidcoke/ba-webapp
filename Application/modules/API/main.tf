@@ -40,10 +40,10 @@ data "aws_subnets" "private" {
 resource "aws_security_group" "lambda" {
   vpc_id = var.vpc_id
   egress {
-    from_port        = 27017
-    to_port          = 27017
-    protocol         = "TCP"
-    cidr_blocks      = ["0.0.0.0/0"]
+    from_port   = 27017
+    to_port     = 27017
+    protocol    = "TCP"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
@@ -66,10 +66,12 @@ resource "aws_lambda_function" "hello_world" {
 
   environment {
     variables = {
-      MONGO_URI = local.mongo_uri
+      MONGO_URI      = local.mongo_uri
+      MONGO_BASE_URL = var.mongodb_ingress_hostname
+      SECRET_ARN = var.mongo_secret
     }
   }
-  
+
 }
 
 locals {
@@ -118,6 +120,22 @@ resource "aws_iam_role_policy_attachment" "iam_role_policy_attachment_lambda_vpc
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
+resource "aws_iam_role_policy_attachment" "secret" {
+  role       = aws_iam_role.lambda_exec.id
+  policy_arn = aws_iam_policy.secret.arn
+}
+
+resource "aws_iam_policy" "secret" {
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action   = "secretsmanager:GetSecretValue"
+      Effect   = "Allow"
+      Resource = var.mongo_secret
+      }
+    ]
+  })
+}
 
 
 

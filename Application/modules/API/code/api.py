@@ -8,17 +8,19 @@ from pymongo import MongoClient
 from bson.json_util import dumps
 
 MONGO_URI = os.environ.get('MONGO_URI')
-# SECRET_ARN = os.environ.get('SECRET_ARN')
+SECRET_ARN = os.environ.get('SECRET_ARN')
 
 ENTRIES_RESOURCE = '/entries'
 GET = 'GET'
 POST = 'POST'
 
-client = MongoClient(MONGO_URI)
-
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
+logger.debug(f"JURI {MONGO_URI}")
+client = MongoClient(MONGO_URI)
+
+
 
 
 def handler(event, context):
