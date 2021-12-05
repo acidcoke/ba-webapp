@@ -18,6 +18,9 @@ data "aws_subnet" "private" {
 resource "aws_security_group" "lambda" {
   description = "allow lambda to connect to mongodb"
   vpc_id      = var.vpc_id
+  tags = {
+    use = "lambda"
+  }
 }
 
 resource "aws_security_group_rule" "egress_mongodb" {
@@ -47,6 +50,10 @@ resource "aws_security_group" "secretsmanager" {
     to_port     = 443
     protocol    = "TCP"
     cidr_blocks = data.aws_subnet.private[*].cidr_block
+  }
+
+  tags = {
+    use = "secretsmanager"
   }
 }
 
