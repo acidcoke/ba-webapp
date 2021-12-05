@@ -10,41 +10,54 @@ data "archive_file" "lambda_hello_world" {
 }
 
 
-data "aws_secretsmanager_secret" "mongo_secret" {
-  arn = var.mongo_secret
-}
-
-data "aws_secretsmanager_secret_version" "mongo_credentials" {
-  secret_id = data.aws_secretsmanager_secret.mongo_secret.arn
-}
-
-locals {
-  db_creds = jsondecode(
-    data.aws_secretsmanager_secret_version.mongo_credentials.secret_string
-  )
-}
-# create lambda function
-
-
-data "aws_subnets" "private" {
-  filter {
-    name   = "vpc-id"
-    values = [var.vpc_id]
-  }
-
-  tags = {
-    type = "private"
-  }
+data "aws_subnet" "private" {
+  count = length(var.private_subnet_ids)
+  id    = var.private_subnet_ids[count.index]
 }
 
 resource "aws_security_group" "lambda" {
-  vpc_id = var.vpc_id
-  egress {
-    from_port   = 27017
-    to_port     = 27017
+  description = "allow lambda to connect to mongodb"
+  vpc_id      = var.vpc_id
+}
+
+resource "aws_security_group_rule" "egress_mongodb" {
+  security_group_id = aws_security_group.lambda.id
+  type              = "egress"
+  from_port         = 27017
+  to_port           = 27017
+  protocol          = "TCP"
+  cidr_blocks       = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "egress_secretsmanager" {
+  security_group_id = aws_security_group.lambda.id
+  type              = "egress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "TCP"
+  cidr_blocks       = ["0.0.0.0/0"]
+}
+
+
+resource "aws_security_group" "secretsmanager" {
+  vpc_id      = var.vpc_id
+  description = "allow lambda to connect to secretsmanager"
+  ingress {
+    from_port   = 443
+    to_port     = 443
     protocol    = "TCP"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = data.aws_subnet.private[*].cidr_block
   }
+}
+
+
+resource "aws_vpc_endpoint" "secretsmanager" {
+  vpc_id              = var.vpc_id
+  service_name        = "com.amazonaws.eu-central-1.secretsmanager"
+  private_dns_enabled = true
+  security_group_ids  = resource.aws_security_group.secretsmanager[*].id
+  subnet_ids          = var.private_subnet_ids
+  vpc_endpoint_type   = "Interface"
 }
 
 resource "aws_lambda_function" "hello_world" {
@@ -60,23 +73,16 @@ resource "aws_lambda_function" "hello_world" {
   role   = aws_iam_role.lambda_exec.arn
   layers = [aws_lambda_layer_version.python37-pymongo-layer.arn]
   vpc_config {
-    subnet_ids         = data.aws_subnets.private.ids
+    subnet_ids         = var.private_subnet_ids
     security_group_ids = [aws_security_group.lambda.id]
   }
 
   environment {
     variables = {
-      MONGO_URI      = local.mongo_uri
       MONGO_BASE_URL = var.mongodb_ingress_hostname
-      SECRET_ARN = var.mongo_secret
+      SECRET_ARN     = var.mongo_secret
     }
   }
-
-}
-
-locals {
-  mongo_credentials = jsondecode(data.aws_secretsmanager_secret_version.mongo_credentials.secret_string)
-  mongo_uri         = "mongodb://${local.mongo_credentials["username"]}:${local.mongo_credentials["password"]}@${var.mongodb_ingress_hostname}"
 }
 
 resource "aws_lambda_layer_version" "python37-pymongo-layer" {
@@ -88,7 +94,7 @@ resource "aws_lambda_layer_version" "python37-pymongo-layer" {
 }
 
 resource "aws_cloudwatch_log_group" "hello_world" {
-  name = "/aws/lambda/${aws_lambda_function.hello_world.function_name}"
+  name = "lambda/${aws_lambda_function.hello_world.function_name}"
 
   retention_in_days = 30
 }
@@ -131,7 +137,7 @@ resource "aws_iam_policy" "secret" {
     Statement = [{
       Action   = "secretsmanager:GetSecretValue"
       Effect   = "Allow"
-      Resource = var.mongo_secret
+      Resource = "${var.mongo_secret}"
       }
     ]
   })
@@ -141,7 +147,7 @@ resource "aws_iam_policy" "secret" {
 
 
 resource "aws_apigatewayv2_api" "lambda" {
-  name          = "serverless_lambda_gw"
+  name          = "lambda_gw"
   protocol_type = "HTTP"
   cors_configuration {
     allow_origins = ["*"]
@@ -152,7 +158,7 @@ resource "aws_apigatewayv2_api" "lambda" {
 resource "aws_apigatewayv2_stage" "lambda" {
   api_id = aws_apigatewayv2_api.lambda.id
 
-  name        = "serverless_lambda_stage"
+  name        = "lambda_stage"
   auto_deploy = true
 
   access_log_settings {
@@ -184,24 +190,24 @@ resource "aws_apigatewayv2_integration" "post" {
 
 locals {
   resource_path = "/entries"
+  route_target  = "integrations/${aws_apigatewayv2_integration.post.id}"
 }
 
 resource "aws_apigatewayv2_route" "create_entries" {
   api_id = aws_apigatewayv2_api.lambda.id
-
   route_key = "POST ${local.resource_path}"
-  target    = "integrations/${aws_apigatewayv2_integration.post.id}"
+  target    = local.route_target
 }
+
 resource "aws_apigatewayv2_route" "get_entries" {
   api_id = aws_apigatewayv2_api.lambda.id
 
   route_key = "GET ${local.resource_path}"
-  target    = "integrations/${aws_apigatewayv2_integration.post.id}"
+  target    = local.route_target
 }
 
-
 resource "aws_cloudwatch_log_group" "api_gw" {
-  name = "/aws/api_gw/${aws_apigatewayv2_api.lambda.name}"
+  name = "api_gw/${aws_apigatewayv2_api.lambda.name}"
 
   retention_in_days = 30
 }

@@ -46,9 +46,13 @@ module "vpc" {
 resource "aws_security_group" "worker_mgmt" {
   name_prefix = "worker_management"
   vpc_id      = module.vpc.vpc_id
-
-
-
+  ingress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
   egress {
     from_port        = 0
     to_port          = 0
@@ -76,21 +80,193 @@ resource "aws_security_group" "efs" {
 }
 
 
+locals {
+  # Directories start with "C:..." on Windows; All other OSs use "/" for root.
+  is_windows = substr(pathexpand("~"), 0, 1) == "/" ? false : true
+}
 
+data "external" "name" {
+  program = (
+    local.is_windows ?
+    ["powershell", "-Command", "curl.exe -s 'ipinfo.io/json'"] :
+    ["bash", "-c", "curl -s 'ipinfo.io/json'"]
+  )
+}
+
+output "public_ip" {
+  value = data.external.name.result.ip
+}
+
+
+data "aws_security_group" "eks_cluster" {
+  id = module.eks.cluster_primary_security_group_id
+}
+
+/* resource "aws_security_group" "eks_cluster" {
+  description = "This needs lambda ingress"
+  vpc_id = module.vpc.vpc_id
+}
+
+
+
+resource "aws_security_group_rule" "required_0" {
+  security_group_id = aws_security_group.eks_cluster.id
+  type = "ingress"
+  from_port = 443
+  to_port = 443
+  protocol = "TCP"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "required_1" {
+  security_group_id = aws_security_group.eks_cluster.id
+  type = "ingress"
+  from_port = 10250
+  to_port = 10250
+  protocol = "TCP"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "required_2" {
+  security_group_id = aws_security_group.eks_cluster.id
+  type = "ingress"
+  from_port = 53
+  to_port = 53
+  protocol = "TCP"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "required_3" {
+  security_group_id = aws_security_group.eks_cluster.id
+  type = "ingress"
+  from_port = 53
+  to_port = 53
+  protocol = "UDP"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "required_4" {
+  security_group_id = aws_security_group.eks_cluster.id
+  type = "egress"
+  from_port = 443
+  to_port = 443
+  protocol = "TCP"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "required_5" {
+  security_group_id = aws_security_group.eks_cluster.id
+  type = "egress"
+  from_port = 10250
+  to_port = 10250
+  protocol = "TCP"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "required_6" {
+  security_group_id = aws_security_group.eks_cluster.id
+  type = "egress"
+  from_port = 53
+  to_port = 53
+  protocol = "TCP"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "required_7" {
+  security_group_id = aws_security_group.eks_cluster.id
+  type = "egress"
+  from_port = 53
+  to_port = 53
+  protocol = "UDP"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "ip" {
+  security_group_id = aws_security_group.eks_cluster.id
+  type = "ingress"
+  from_port = 6443
+  to_port = 6443
+  protocol = "TCP"
+  cidr_blocks = ["${data.external.name.result.ip}/32"]
+}
+
+resource "aws_security_group_rule" "ip1" {
+  security_group_id = aws_security_group.eks_cluster.id
+  type = "ingress"
+  from_port = 0
+  to_port = 0
+  protocol = "-1"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "ip2" {
+  security_group_id = aws_security_group.eks_cluster.id
+  type = "egress"
+  from_port = 0
+  to_port = 0
+  protocol = "-1"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "lambda" {
+   security_group_id = aws_security_group.eks_cluster.id
+  type = "ingress" 
+    from_port   = 27017
+    to_port     = 27017
+    protocol    = "TCP"
+    cidr_blocks = ["0.0.0.0/0"]
+  
+}
+
+resource "aws_security_group_rule" "lambd" {
+   security_group_id = aws_security_group.eks_cluster.id
+  type = "egress" 
+    from_port   = 27017
+    to_port     = 27017
+    protocol    = "TCP"
+    cidr_blocks = ["0.0.0.0/0"]
+  
+} */
+
+
+/* resource "aws_security_group_rule" "lamb" {
+   security_group_id = aws_security_group.eks_cluster.id
+  type = "ingress" 
+  from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+  
+}
+
+resource "aws_security_group_rule" "lam" {
+   security_group_id = aws_security_group.eks_cluster.id
+  type = "egress" 
+  from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+  
+} */
 
 
 # Firstly we will create a random generated password which we will use in secrets.
 
 resource "random_password" "password" {
-  length           = 16
+  length           = 20
   special          = true
   override_special = "_%@"
+}
+
+resource "random_password" "username" {
+  length = 10
 }
 
 
 # Now create secret and secret versions for database master account 
 
 resource "aws_secretsmanager_secret" "mongo_secret" {
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "mongo_secret_version" {
@@ -98,7 +274,7 @@ resource "aws_secretsmanager_secret_version" "mongo_secret_version" {
 
   secret_string = <<EOF
    {
-    "username": "user",
+    "username": "${random_password.username.result}",
     "password": "${random_password.password.result}"
    }
 EOF
@@ -157,10 +333,17 @@ resource "aws_efs_backup_policy" "efs" {
 
 
 module "eks" {
-  source          = "terraform-aws-modules/eks/aws"
-  cluster_name    = local.cluster_name
-  cluster_version = "1.20"
-  subnets         = module.vpc.private_subnets
+  source                        = "terraform-aws-modules/eks/aws"
+  cluster_name                  = local.cluster_name
+  cluster_version               = "1.20"
+  cluster_create_security_group = true
+  /*  cluster_security_group_id = aws_security_group.eks_cluster.id
+  cluster_endpoint_private_access_sg = [aws_security_group.eks_cluster.id]
+  cluster_endpoint_private_access_cidrs = ["0.0.0.0/0"]
+  cluster_create_endpoint_private_access_sg_rule = true
+  cluster_endpoint_private_access = true
+  cluster_endpoint_public_access = false */
+  subnets = module.vpc.private_subnets
 
   vpc_id = module.vpc.vpc_id
 
@@ -170,10 +353,22 @@ module "eks" {
 
   worker_groups = [
     {
-      name                          = "ba-worker-group"
+      name                          = "ba-worker-group-1"
+      instance_type                 = "t2.micro"
+      additional_security_group_ids = [aws_security_group.worker_mgmt.id]
+      asg_desired_capacity          = 1
+    },
+    {
+      name                          = "ba-worker-group-2"
+      instance_type                 = "t2.micro"
+      additional_security_group_ids = [aws_security_group.worker_mgmt.id]
+      asg_desired_capacity          = 1
+    },
+    {
+      name                          = "ba-worker-group-3"
       instance_type                 = "t2.small"
       additional_security_group_ids = [aws_security_group.worker_mgmt.id]
-      asg_desired_capacity          = 2
+      asg_desired_capacity          = 1
     }
   ]
 }

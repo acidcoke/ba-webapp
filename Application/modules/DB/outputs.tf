@@ -10,3 +10,7 @@ output "mongo_secret" {
 output "vpc_id" {
   value = module.aws.vpc_id
 }
+
+output "private_subnet_ids" {
+  value = module.aws.private_subnet_ids
+}

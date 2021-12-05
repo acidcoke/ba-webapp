@@ -3,6 +3,8 @@ module "API" {
   mongodb_ingress_hostname = module.DB.mongodb_ingress_hostname
   mongo_secret             = module.DB.mongo_secret
   vpc_id                   = module.DB.vpc_id
+
+  private_subnet_ids = module.DB.private_subnet_ids
 }
 
 module "Frontend" {
