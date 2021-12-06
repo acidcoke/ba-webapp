@@ -1,5 +1,6 @@
 import boto3
 import json
+import logging
 import os
 import time
 import urllib.parse
@@ -7,18 +8,22 @@ import bson.json_util
 
 from pymongo import MongoClient
 
-SECRET_ARN = os.environ.get('SECRET_ARN')
-MONGO_BASE_URL = os.environ.get('MONGO_BASE_URL')
-
-ENTRIES_RESOURCE = '/entries'
 
 def handler(event, context):
+    SECRET_ARN = os.environ.get('SECRET_ARN')
+    MONGO_BASE_URL = os.environ.get('MONGO_BASE_URL')
+
+    ENTRIES_RESOURCE = '/entries'
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
     secret = get_secret(SECRET_ARN)
     uri = create_uri(json.loads(secret), MONGO_BASE_URL)
     client = MongoClient(uri)
     db = client.guestbook
     entries = db.entries
-
+    logger.info(f"EVENT: {event}")
     if event['httpMethod'] == 'GET':
         entry_cursor = entries.find()
         entry_cursor_list = list(entry_cursor)

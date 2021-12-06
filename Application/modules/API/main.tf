@@ -57,7 +57,6 @@ resource "aws_security_group" "secretsmanager" {
   }
 }
 
-
 resource "aws_vpc_endpoint" "secretsmanager" {
   vpc_id              = var.vpc_id
   service_name        = "com.amazonaws.eu-central-1.secretsmanager"
@@ -201,7 +200,7 @@ locals {
 }
 
 resource "aws_apigatewayv2_route" "create_entries" {
-  api_id = aws_apigatewayv2_api.lambda.id
+  api_id    = aws_apigatewayv2_api.lambda.id
   route_key = "POST ${local.resource_path}"
   target    = local.route_target
 }
