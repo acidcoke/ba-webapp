@@ -14,16 +14,16 @@ MONGO_BASE_URL = os.environ.get('MONGO_BASE_URL')
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+
 def handler(event, context):
     logger.info(f"EVENT: {event}")
     if event['resource'] == '/entries':
         secret = get_secret(SECRET_ARN)
         uri = create_uri(json.loads(secret), MONGO_BASE_URL)
-        client = MongoClient(uri)
-        db = client.guestbook
-        entries = db.entries
+        entries = MongoClient(uri).guestbook.entries
         if event['httpMethod'] == 'GET':
             entry_cursor = entries.find()
+            logging.info(f"RESULT: {entry_cursor}")
             entry_cursor_list = list(entry_cursor)
             for cursor in entry_cursor_list:
                 del cursor['_id']
@@ -36,12 +36,10 @@ def handler(event, context):
         elif event['httpMethod'] == 'POST':
             entry = json.loads(event['body'])
             entry["date"] = time.time()
-            entries.insert_one(entry)
+            result = entries.insert_one(entry)
+            logging.info(f"RESULT: {result}")
             return {
-                "statusCode": 201,
-                "headers": {
-                    "Content-Type": "application/json"
-                }
+                "statusCode": 201
             }
 
 
