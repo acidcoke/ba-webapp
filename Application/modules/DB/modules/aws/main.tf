@@ -252,16 +252,14 @@ resource "aws_security_group_rule" "lam" {
 
 # Firstly we will create a random generated password which we will use in secrets.
 
-resource "random_password" "password" {
-  length           = 20
-  special          = true
-  override_special = "_%@"
-}
-
-resource "random_password" "username" {
+resource "random_string" "username" {
   length = 10
 }
 
+resource "random_password" "password" {
+  length           = 20
+  special          = true
+}
 
 # Now create secret and secret versions for database master account 
 
@@ -274,7 +272,7 @@ resource "aws_secretsmanager_secret_version" "mongo_secret_version" {
 
   secret_string = <<EOF
    {
-    "username": "${random_password.username.result}",
+    "username": "${random_string.username.result}",
     "password": "${random_password.password.result}"
    }
 EOF
