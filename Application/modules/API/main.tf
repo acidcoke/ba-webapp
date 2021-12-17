@@ -1,14 +1,17 @@
+############################################################################################
+# PROVIDER CONFIGURATION                                                                   #
+############################################################################################
+
 provider "aws" {
   region = var.aws_region
 }
 
-data "archive_file" "lambda_hello_world" {
-  type = "zip"
+############################################################################################
+# LAMBDA CONFIGURATION                                                                     #
+############################################################################################
 
-  source_dir  = "${path.module}/code"
-  output_path = "${path.module}/code.zip"
-}
 
+/* NETWORK FOR LAMBDA FUNCTION */
 data "aws_subnet" "private" {
   count = length(var.private_subnet_ids)
   id    = var.private_subnet_ids[count.index]
@@ -17,9 +20,6 @@ data "aws_subnet" "private" {
 resource "aws_security_group" "lambda" {
   description = "allow lambda to connect to mongodb"
   vpc_id      = var.vpc_id
-  tags = {
-    use = "lambda"
-  }
 }
 
 resource "aws_security_group_rule" "egress_mongodb" {
@@ -39,41 +39,24 @@ resource "aws_security_group_rule" "egress_secretsmanager" {
   protocol          = "TCP"
   cidr_blocks       = ["0.0.0.0/0"]
 }
+data "archive_file" "lambda_api_code" {
+  type = "zip"
 
-
-resource "aws_security_group" "secretsmanager" {
-  vpc_id      = var.vpc_id
-  description = "allow lambda to connect to secretsmanager"
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "TCP"
-    cidr_blocks = data.aws_subnet.private[*].cidr_block
-  }
-
-  tags = {
-    use = "secretsmanager"
-  }
+  source_dir  = "${path.module}/code"
+  output_path = "${path.module}/code.zip"
 }
 
-resource "aws_vpc_endpoint" "secretsmanager" {
-  vpc_id              = var.vpc_id
-  service_name        = "com.amazonaws.eu-central-1.secretsmanager"
-  private_dns_enabled = true
-  security_group_ids  = resource.aws_security_group.secretsmanager[*].id
-  subnet_ids          = var.private_subnet_ids
-  vpc_endpoint_type   = "Interface"
-}
 
-resource "aws_lambda_function" "hello_world" {
-  function_name = "HelloWorld"
+
+resource "aws_lambda_function" "api_code" {
+  function_name = "APICode"
 
   filename = "${path.module}/code.zip"
 
   runtime = "python3.7"
   handler = "api.handler"
 
-  source_code_hash = data.archive_file.lambda_hello_world.output_base64sha256
+  source_code_hash = data.archive_file.lambda_api_code.output_base64sha256
 
   role   = aws_iam_role.lambda_exec.arn
   layers = [aws_lambda_layer_version.python37-pymongo-layer.arn]
@@ -98,10 +81,23 @@ resource "aws_lambda_layer_version" "python37-pymongo-layer" {
   compatible_architectures = ["x86_64"]
 }
 
-resource "aws_cloudwatch_log_group" "hello_world" {
-  name = "lambda/${aws_lambda_function.hello_world.function_name}"
+/* LOGGING FORLAMBDA */
+
+resource "aws_cloudwatch_log_group" "api_code" {
+  name = "lambda/${aws_lambda_function.api_code.function_name}"
 
   retention_in_days = 30
+}
+
+/* IAM FOR LAMBDA */
+
+resource "aws_lambda_permission" "api_gw" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.api_code.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_apigatewayv2_api.lambda.execution_arn}/*/*"
 }
 
 resource "aws_iam_role" "lambda_exec" {
@@ -149,6 +145,11 @@ resource "aws_iam_policy" "secret" {
 }
 
 
+############################################################################################
+# API CONFIGURATION                                                                        #
+############################################################################################
+
+
 resource "aws_apigatewayv2_api" "lambda" {
   name          = "lambda_gw"
   protocol_type = "HTTP"
@@ -186,7 +187,7 @@ resource "aws_apigatewayv2_stage" "lambda" {
 resource "aws_apigatewayv2_integration" "post" {
   api_id = aws_apigatewayv2_api.lambda.id
 
-  integration_uri    = aws_lambda_function.hello_world.invoke_arn
+  integration_uri    = aws_lambda_function.api_code.invoke_arn
   integration_type   = "AWS_PROXY"
   integration_method = "POST"
 }
@@ -215,11 +216,32 @@ resource "aws_cloudwatch_log_group" "api_gw" {
   retention_in_days = 30
 }
 
-resource "aws_lambda_permission" "api_gw" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.hello_world.function_name
-  principal     = "apigateway.amazonaws.com"
 
-  source_arn = "${aws_apigatewayv2_api.lambda.execution_arn}/*/*"
+
+############################################################################################
+# NETWORK FOR SECRETS MANAGER                                                              #
+############################################################################################
+
+resource "aws_security_group" "secretsmanager" {
+  vpc_id      = var.vpc_id
+  description = "allow lambda to connect to secretsmanager"
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "TCP"
+    cidr_blocks = data.aws_subnet.private[*].cidr_block
+  }
+
+  tags = {
+    use = "secretsmanager"
+  }
+}
+
+resource "aws_vpc_endpoint" "secretsmanager" {
+  vpc_id              = var.vpc_id
+  service_name        = "com.amazonaws.eu-central-1.secretsmanager"
+  private_dns_enabled = true
+  security_group_ids  = resource.aws_security_group.secretsmanager[*].id
+  subnet_ids          = var.private_subnet_ids
+  vpc_endpoint_type   = "Interface"
 }
