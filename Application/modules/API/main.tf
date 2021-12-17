@@ -9,7 +9,6 @@ data "archive_file" "lambda_hello_world" {
   output_path = "${path.module}/code.zip"
 }
 
-
 data "aws_subnet" "private" {
   count = length(var.private_subnet_ids)
   id    = var.private_subnet_ids[count.index]
@@ -148,8 +147,6 @@ resource "aws_iam_policy" "secret" {
     ]
   })
 }
-
-
 
 
 resource "aws_apigatewayv2_api" "lambda" {

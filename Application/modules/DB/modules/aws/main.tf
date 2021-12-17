@@ -7,8 +7,8 @@ provider "aws" {
   region = var.region
 }
 
-data "aws_availability_zones" "available" {}
-
+data "aws_availability_zones" "available" {
+}
 
 resource "random_string" "suffix" {
   length  = 8
@@ -79,186 +79,17 @@ resource "aws_security_group" "efs" {
   }
 }
 
-
-locals {
-  # Directories start with "C:..." on Windows; All other OSs use "/" for root.
-  is_windows = substr(pathexpand("~"), 0, 1) == "/" ? false : true
-}
-
-data "external" "name" {
-  program = (
-    local.is_windows ?
-    ["powershell", "-Command", "curl.exe -s 'ipinfo.io/json'"] :
-    ["bash", "-c", "curl -s 'ipinfo.io/json'"]
-  )
-}
-
-output "public_ip" {
-  value = data.external.name.result.ip
-}
-
-
 data "aws_security_group" "eks_cluster" {
   id = module.eks.cluster_primary_security_group_id
 }
-
-/* resource "aws_security_group" "eks_cluster" {
-  description = "This needs lambda ingress"
-  vpc_id = module.vpc.vpc_id
-}
-
-
-
-resource "aws_security_group_rule" "required_0" {
-  security_group_id = aws_security_group.eks_cluster.id
-  type = "ingress"
-  from_port = 443
-  to_port = 443
-  protocol = "TCP"
-  cidr_blocks = ["0.0.0.0/0"]
-}
-
-resource "aws_security_group_rule" "required_1" {
-  security_group_id = aws_security_group.eks_cluster.id
-  type = "ingress"
-  from_port = 10250
-  to_port = 10250
-  protocol = "TCP"
-  cidr_blocks = ["0.0.0.0/0"]
-}
-
-resource "aws_security_group_rule" "required_2" {
-  security_group_id = aws_security_group.eks_cluster.id
-  type = "ingress"
-  from_port = 53
-  to_port = 53
-  protocol = "TCP"
-  cidr_blocks = ["0.0.0.0/0"]
-}
-
-resource "aws_security_group_rule" "required_3" {
-  security_group_id = aws_security_group.eks_cluster.id
-  type = "ingress"
-  from_port = 53
-  to_port = 53
-  protocol = "UDP"
-  cidr_blocks = ["0.0.0.0/0"]
-}
-
-resource "aws_security_group_rule" "required_4" {
-  security_group_id = aws_security_group.eks_cluster.id
-  type = "egress"
-  from_port = 443
-  to_port = 443
-  protocol = "TCP"
-  cidr_blocks = ["0.0.0.0/0"]
-}
-
-resource "aws_security_group_rule" "required_5" {
-  security_group_id = aws_security_group.eks_cluster.id
-  type = "egress"
-  from_port = 10250
-  to_port = 10250
-  protocol = "TCP"
-  cidr_blocks = ["0.0.0.0/0"]
-}
-
-resource "aws_security_group_rule" "required_6" {
-  security_group_id = aws_security_group.eks_cluster.id
-  type = "egress"
-  from_port = 53
-  to_port = 53
-  protocol = "TCP"
-  cidr_blocks = ["0.0.0.0/0"]
-}
-
-resource "aws_security_group_rule" "required_7" {
-  security_group_id = aws_security_group.eks_cluster.id
-  type = "egress"
-  from_port = 53
-  to_port = 53
-  protocol = "UDP"
-  cidr_blocks = ["0.0.0.0/0"]
-}
-
-resource "aws_security_group_rule" "ip" {
-  security_group_id = aws_security_group.eks_cluster.id
-  type = "ingress"
-  from_port = 6443
-  to_port = 6443
-  protocol = "TCP"
-  cidr_blocks = ["${data.external.name.result.ip}/32"]
-}
-
-resource "aws_security_group_rule" "ip1" {
-  security_group_id = aws_security_group.eks_cluster.id
-  type = "ingress"
-  from_port = 0
-  to_port = 0
-  protocol = "-1"
-  cidr_blocks = ["0.0.0.0/0"]
-}
-
-resource "aws_security_group_rule" "ip2" {
-  security_group_id = aws_security_group.eks_cluster.id
-  type = "egress"
-  from_port = 0
-  to_port = 0
-  protocol = "-1"
-  cidr_blocks = ["0.0.0.0/0"]
-}
-
-resource "aws_security_group_rule" "lambda" {
-   security_group_id = aws_security_group.eks_cluster.id
-  type = "ingress" 
-    from_port   = 27017
-    to_port     = 27017
-    protocol    = "TCP"
-    cidr_blocks = ["0.0.0.0/0"]
-  
-}
-
-resource "aws_security_group_rule" "lambd" {
-   security_group_id = aws_security_group.eks_cluster.id
-  type = "egress" 
-    from_port   = 27017
-    to_port     = 27017
-    protocol    = "TCP"
-    cidr_blocks = ["0.0.0.0/0"]
-  
-} */
-
-
-/* resource "aws_security_group_rule" "lamb" {
-   security_group_id = aws_security_group.eks_cluster.id
-  type = "ingress" 
-  from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-  
-}
-
-resource "aws_security_group_rule" "lam" {
-   security_group_id = aws_security_group.eks_cluster.id
-  type = "egress" 
-  from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-  
-} */
-
-
-# Firstly we will create a random generated password which we will use in secrets.
 
 resource "random_string" "username" {
   length = 10
 }
 
 resource "random_password" "password" {
-  length           = 20
-  special          = true
+  length  = 20
+  special = true
 }
 
 # Now create secret and secret versions for database master account 
@@ -285,20 +116,20 @@ resource "aws_iam_role" "a" {
   name = "iam-role-for-grant"
 
   assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
     {
-      "Action": "sts:AssumeRole",
-      "Principal": {
-        "Service": "lambda.amazonaws.com"
-      },
-      "Effect": "Allow",
-      "Sid": ""
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Action": "sts:AssumeRole",
+          "Principal": {
+            "Service": "lambda.amazonaws.com"
+          },
+          "Effect": "Allow",
+          "Sid": ""
+        }
+      ]
     }
-  ]
-}
-EOF
+    EOF
 }
 
 resource "aws_kms_grant" "a" {
@@ -335,12 +166,14 @@ module "eks" {
   cluster_name                  = local.cluster_name
   cluster_version               = "1.20"
   cluster_create_security_group = true
-  /*  cluster_security_group_id = aws_security_group.eks_cluster.id
-  cluster_endpoint_private_access_sg = [aws_security_group.eks_cluster.id]
-  cluster_endpoint_private_access_cidrs = ["0.0.0.0/0"]
-  cluster_create_endpoint_private_access_sg_rule = true
-  cluster_endpoint_private_access = true
-  cluster_endpoint_public_access = false */
+
+  cluster_encryption_config = [
+    {
+      provider_key_arn = aws_kms_key.a.arn
+      resources        = ["secrets"]
+    }
+  ]
+
   subnets = module.vpc.private_subnets
 
   vpc_id = module.vpc.vpc_id
@@ -374,7 +207,6 @@ module "eks" {
 locals {
   cluster_name = "ba-eks-${random_string.suffix.result}"
 }
-
 
 data "aws_eks_cluster" "cluster" {
   name = module.eks.cluster_id

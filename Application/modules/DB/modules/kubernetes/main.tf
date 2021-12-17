@@ -16,29 +16,22 @@ provider "kubernetes" {
 resource "kubernetes_stateful_set" "mongodb_stateful_set" {
   metadata {
     name = "mongodb-stateful-set"
-    labels = {
-      app = "mongodb"
-    }
   }
 
   spec {
     replicas = 1
     selector {
-      match_labels = {
-        app = "mongodb"
-      }
+      match_labels = local.app_label
     }
     template {
       metadata {
-        labels = {
-          app = "mongodb"
-        }
+        labels = local.app_label
       }
       spec {
         volume {
-          name = "mongodb-pv"
+          name = kubernetes_persistent_volume.mongodb_persistent_volume.metadata.0.name
           persistent_volume_claim {
-            claim_name = "mongodb-claim"
+            claim_name = kubernetes_persistent_volume_claim.mongodb_persistent_volume_claim.metadata.0.name
           }
         }
         container {
@@ -51,7 +44,7 @@ resource "kubernetes_stateful_set" "mongodb_stateful_set" {
             name = "MONGO_INITDB_ROOT_USERNAME"
             value_from {
               secret_key_ref {
-                name = "mongodb-secret"
+                name = kubernetes_secret.mongodb_secret.metadata.0.name
                 key  = "mongo-root-username"
               }
             }
@@ -60,19 +53,19 @@ resource "kubernetes_stateful_set" "mongodb_stateful_set" {
             name = "MONGO_INITDB_ROOT_PASSWORD"
             value_from {
               secret_key_ref {
-                name = "mongodb-secret"
+                name = kubernetes_secret.mongodb_secret.metadata.0.name
                 key  = "mongo-root-password"
               }
             }
           }
           volume_mount {
-            name       = "mongodb-pv"
-            mount_path = "/data/mongodb"
+            name       = kubernetes_persistent_volume.mongodb_persistent_volume.metadata.0.name
+            mount_path = "/data/db"
           }
         }
       }
     }
-    service_name = "mongodb-service"
+    service_name = kubernetes_service.mongodb_service.metadata.0.name
   }
 }
 
@@ -85,13 +78,11 @@ resource "kubernetes_service" "mongodb_service" {
     port {
       protocol    = "TCP"
       port        = 27017
-      target_port = "27017"
+      target_port = 27017
     }
 
-    selector = {
-      app = "mongodb"
-    }
-    type = "LoadBalancer"
+    selector = local.app_label
+    type     = "LoadBalancer"
   }
 }
 
@@ -105,20 +96,18 @@ resource "kubernetes_secret" "mongodb_secret" {
     mongo-root-password = local.mongo_creds["password"]
     mongo-root-username = local.mongo_creds["username"]
   }
-
 }
 
-resource "kubernetes_persistent_volume" "storage" {
+resource "kubernetes_persistent_volume" "mongodb_persistent_volume" {
   metadata {
     name = "mongodb-pv"
   }
   spec {
-    storage_class_name               = "efs-sc"
-    persistent_volume_reclaim_policy = "Retain"
+    access_modes       = ["ReadWriteOnce"]
+    storage_class_name = "efs-sc"
     capacity = {
       storage = "2Gi"
     }
-    access_modes = ["ReadWriteOnce"]
     persistent_volume_source {
       csi {
         driver        = "efs.csi.aws.com"
@@ -128,20 +117,19 @@ resource "kubernetes_persistent_volume" "storage" {
   }
 }
 
-resource "kubernetes_persistent_volume_claim" "storage" {
-
+resource "kubernetes_persistent_volume_claim" "mongodb_persistent_volume_claim" {
   metadata {
     name = "mongodb-claim"
   }
   spec {
-    access_modes = ["ReadWriteOnce"]
+    access_modes       = ["ReadWriteOnce"]
     storage_class_name = "efs-sc"
     resources {
       requests = {
         storage = "1Gi"
       }
     }
-    volume_name = kubernetes_persistent_volume.storage.metadata.0.name
+    volume_name = kubernetes_persistent_volume.mongodb_persistent_volume.metadata.0.name
   }
 }
 
@@ -153,26 +141,26 @@ locals {
   mongo_creds = jsondecode(
     data.aws_secretsmanager_secret_version.mongo_credentials.secret_string
   )
+
+  app_label = {
+    app = "mongodb"
+  }
+  csi_driver = "aws-efs-csi-driver"
 }
 
 
 provider "helm" {
   kubernetes {
-    host = var.cluster_endpoint
-
+    host                   = var.cluster_endpoint
     cluster_ca_certificate = var.cluster_ca_certificate
     token                  = var.cluster_auth_token
   }
 }
 
+
 resource "helm_release" "kubernetes_efs_csi_driver" {
-  name       = "aws-efs-csi-driver"
-  chart      = "aws-efs-csi-driver"
+  name       = local.csi_driver
+  chart      = local.csi_driver
   repository = "https://kubernetes-sigs.github.io/aws-efs-csi-driver/"
   version    = "1.2.4"
-
-  set {
-    name  = "serviceAccount.name"
-    value = "aws-efs-csi-driver"
-  }
 }

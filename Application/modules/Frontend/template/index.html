@@ -40,21 +40,10 @@
   <script>
     document.getElementById('b1').addEventListener('click', addEntry);
     window.onload = loadEntries();
-    // Load Github Users
-
     function addEntry() {
       const xhttp = new XMLHttpRequest();
       xhttp.onload = function () {
         loadEntries()
-        /* current = document.getElementById('users').innerHTML;
-        current = '<div class="user">' +
-          '<ul>' +
-          '<li>' + comment + '</li>' +
-          '<hr> ' +
-          '<li><div class="p1">' + author + '</div></li>' +
-          '</ul>' +
-          '</div>' + current;
-        document.getElementById('users').innerHTML = current; */
       }
       xhttp.open('POST', '${url}', true);
       author = document.getElementById('name').value;
@@ -65,16 +54,14 @@
 
     function loadEntries() {
       var xhr = new XMLHttpRequest();
-
       xhr.open('GET', '${url}', true);
-
       xhr.onload = function () {
         if (this.status == 202) {
           var users = JSON.parse(this.responseText);
           var output = '';
           users.forEach(user => {
             var utcSeconds = user['date'];
-            var date = new Date(0); // The 0 there is the key, which sets the date to the epoch
+            var date = new Date(0); // The 0 sets the date to the epoch
             date.setUTCSeconds(utcSeconds);
             date = date.toLocaleDateString() +
               ' ' + date.getHours() +
@@ -89,7 +76,6 @@
               '</ul>' +
               '</div>' + output;
           });
-
           document.getElementById('users').innerHTML = output;
         }
       }

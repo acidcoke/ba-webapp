@@ -19,7 +19,7 @@ def handler(event, context):
     logger.info(f"EVENT: {event}")
     if event['resource'] == '/entries':
         secret = get_secret(SECRET_ARN)
-        uri = create_uri(json.loads(secret), MONGO_BASE_URL)
+        uri = create_uri(secret, MONGO_BASE_URL)
         entries = MongoClient(uri).guestbook.entries
         if event['httpMethod'] == 'GET':
             entry_cursor = entries.find()
@@ -52,7 +52,7 @@ def get_secret(secret_arn):
         secret = get_secret_value_response['SecretString']
     elif 'SecretBinary' in get_secret_value_response:
         secret = base64.b64decode(get_secret_value_response['SecretBinary'])
-    return secret
+    return json.loads(secret)
 
 
 def create_uri(secret, url):
