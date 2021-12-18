@@ -18,5 +18,9 @@ variable "efs_example_fsid" {
 }
 
 variable "mongo_secret" {
-  
+
+}
+
+variable "name_prefix" {
+  type = string
 }

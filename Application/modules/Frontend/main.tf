@@ -15,22 +15,20 @@ resource "aws_s3_bucket" "website" {
     max_age_seconds = 3000
   }
 
-  policy = <<EOF
-{
-  "Version": "2008-10-17",
-  "Statement": [
-    {
-      "Sid": "PublicReadForGetBucketObjects",
-      "Effect": "Allow",
-      "Principal": {
-        "AWS": "*"
-      },
-      "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::${var.website_bucket_name}/*"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          AWS = "*"
+        }
+        Action   = "s3:GetObject"
+        Resource = "arn:aws:s3:::${var.website_bucket_name}/*"
+      }
+    ]
     }
-  ]
-}
-EOF
+  )
 
   website {
     index_document = "index.html"
@@ -48,7 +46,7 @@ resource "aws_s3_bucket" "website_redirect" {
   }
 }
 
-resource "aws_s3_bucket_object" "object" {
+resource "aws_s3_bucket_object" "this" {
   bucket       = aws_s3_bucket.website.id
   content      = local.content
   key          = "index.html"

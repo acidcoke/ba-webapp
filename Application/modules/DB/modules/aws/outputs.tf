@@ -1,5 +1,5 @@
 output "mongo_secret" {
-  value = aws_secretsmanager_secret.mongo_secret.arn
+  value = aws_secretsmanager_secret.mongodb.arn
 }
 
 output "vpc_id" {
@@ -8,11 +8,6 @@ output "vpc_id" {
 
 output "private_subnet_ids" {
   value = module.vpc.private_subnets
-}
-
-output "cluster_id" {
-  description = "EKS cluster ID."
-  value       = module.eks.cluster_id
 }
 
 output "cluster_endpoint" {
@@ -40,21 +35,16 @@ output "region" {
   value       = var.region
 }
 
-output "cluster_name" {
-  description = "Kubernetes Cluster Name"
-  value       = local.cluster_name
-}
-
 output "cluster_auth_token" {
   description = "Kubernetes cluster authentication token"
-  value       = data.aws_eks_cluster_auth.cluster.token
+  value       = data.aws_eks_cluster_auth.this.token
 }
 
 output "cluster_ca_certificate" {
   description = "Kubernetes cluster ca certificate"
-  value       = base64decode(data.aws_eks_cluster.cluster.certificate_authority.0.data)
+  value       = base64decode(module.eks.cluster_certificate_authority_data)
 }
 
 output "efs_example_fsid" {
-  value = aws_efs_file_system.ba-efs.id
+  value = aws_efs_file_system.this.id
 }

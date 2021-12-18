@@ -1,3 +1,3 @@
 variable "name_prefix" {
-  default = "BA-GB-"
+  default = "BA-GB"
 }

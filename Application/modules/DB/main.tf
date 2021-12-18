@@ -1,5 +1,7 @@
 module "aws" {
   source = "./modules/aws"
+
+  name_prefix = var.name_prefix
 }
 
 module "kubernetes" {
@@ -10,5 +12,7 @@ module "kubernetes" {
   cluster_ca_certificate = module.aws.cluster_ca_certificate
 
   efs_example_fsid = module.aws.efs_example_fsid
-  mongo_secret = module.aws.mongo_secret
+  mongo_secret     = module.aws.mongo_secret
+
+  name_prefix = var.name_prefix
 }

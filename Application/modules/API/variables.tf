@@ -15,13 +15,17 @@ variable "mongodb_ingress_hostname" {
 }
 
 variable "mongo_secret" {
-  
+
 }
 
 variable "vpc_id" {
-  
+
 }
 
 variable "private_subnet_ids" {
-  
+
+}
+
+variable "name_prefix" {
+  type = string
 }

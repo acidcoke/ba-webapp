@@ -13,3 +13,7 @@ variable "website_bucket_name" {
 variable "api_route" {
   default = ""
 }
+
+variable "name_prefix" {
+  type = string
+}

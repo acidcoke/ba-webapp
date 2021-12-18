@@ -10,16 +10,13 @@ provider "aws" {
 data "aws_availability_zones" "available" {
 }
 
-resource "random_string" "suffix" {
-  length  = 8
-  special = false
-}
+
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "3.2.0"
 
-  name                 = "ba-vpc"
+  name                 = var.name_prefix
   cidr                 = "10.0.0.0/16"
   azs                  = data.aws_availability_zones.available.names
   private_subnets      = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
@@ -44,7 +41,7 @@ module "vpc" {
 }
 
 resource "aws_security_group" "worker_mgmt" {
-  name_prefix = "worker_management"
+  name_prefix = "${var.name_prefix}-WorkerManagement"
   vpc_id      = module.vpc.vpc_id
   ingress {
     from_port        = 0
@@ -63,7 +60,7 @@ resource "aws_security_group" "worker_mgmt" {
 }
 
 resource "aws_security_group" "efs" {
-  name_prefix = "efs"
+  name_prefix = "${var.name_prefix}-EFS"
   vpc_id      = module.vpc.vpc_id
 
   ingress {
@@ -94,67 +91,65 @@ resource "random_password" "password" {
 
 # Now create secret and secret versions for database master account 
 
-resource "aws_secretsmanager_secret" "mongo_secret" {
+resource "aws_secretsmanager_secret" "mongodb" {
+  name_prefix             = "${var.name_prefix}-mongodb"
   recovery_window_in_days = 0
 }
 
-resource "aws_secretsmanager_secret_version" "mongo_secret_version" {
-  secret_id = aws_secretsmanager_secret.mongo_secret.id
+resource "aws_secretsmanager_secret_version" "mongodb" {
+  secret_id = aws_secretsmanager_secret.mongodb.id
 
-  secret_string = <<EOF
-   {
-    "username": "${random_string.username.result}",
-    "password": "${random_password.password.result}"
-   }
-EOF
-}
-
-
-resource "aws_kms_key" "a" {}
-
-resource "aws_iam_role" "a" {
-  name = "iam-role-for-grant"
-
-  assume_role_policy = <<EOF
+  secret_string = jsonencode(
     {
-      "Version": "2012-10-17",
-      "Statement": [
-        {
-          "Action": "sts:AssumeRole",
-          "Principal": {
-            "Service": "lambda.amazonaws.com"
-          },
-          "Effect": "Allow",
-          "Sid": ""
-        }
-      ]
+      username = "${random_string.username.result}"
+      password = "${random_password.password.result}"
     }
-    EOF
+  )
 }
 
-resource "aws_kms_grant" "a" {
-  name              = "ba-grant"
-  key_id            = aws_kms_key.a.key_id
-  grantee_principal = aws_iam_role.a.arn
+
+resource "aws_kms_key" "this" {}
+
+resource "aws_iam_role" "this" {
+  name_prefix = "${var.name_prefix}-kms-grant"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+        Effect = "Allow"
+      }
+    ]
+  })
+
+}
+
+resource "aws_kms_grant" "this" {
+  name              = var.name_prefix
+  key_id            = aws_kms_key.this.key_id
+  grantee_principal = aws_iam_role.this.arn
   operations        = ["Encrypt", "Decrypt", "GenerateDataKey"]
 }
 
 
 
-resource "aws_efs_file_system" "ba-efs" {
-  kms_key_id = aws_kms_key.a.arn
+resource "aws_efs_file_system" "this" {
+  kms_key_id = aws_kms_key.this.arn
   encrypted  = true
 }
 
-resource "aws_efs_mount_target" "private" {
+resource "aws_efs_mount_target" "this" {
   count           = length(module.vpc.private_subnets)
-  file_system_id  = aws_efs_file_system.ba-efs.id
+  file_system_id  = aws_efs_file_system.this.id
   subnet_id       = module.vpc.private_subnets[count.index]
   security_groups = [aws_security_group.efs.id]
 }
 
-resource "aws_efs_backup_policy" "efs" {
-  file_system_id = aws_efs_file_system.ba-efs.id
+resource "aws_efs_backup_policy" "this" {
+  file_system_id = aws_efs_file_system.this.id
   backup_policy {
     status = "ENABLED"
   }
@@ -166,10 +161,9 @@ module "eks" {
   cluster_name                  = local.cluster_name
   cluster_version               = "1.20"
   cluster_create_security_group = true
-
   cluster_encryption_config = [
     {
-      provider_key_arn = aws_kms_key.a.arn
+      provider_key_arn = aws_kms_key.this.arn
       resources        = ["secrets"]
     }
   ]
@@ -184,34 +178,31 @@ module "eks" {
 
   worker_groups = [
     {
-      name                          = "ba-worker-group-1"
-      instance_type                 = "t2.micro"
-      additional_security_group_ids = [aws_security_group.worker_mgmt.id]
-      asg_desired_capacity          = 1
+      name                 = "workers-1"
+      instance_type        = "t2.micro"
+      asg_desired_capacity = 1
     },
     {
-      name                          = "ba-worker-group-2"
-      instance_type                 = "t2.micro"
-      additional_security_group_ids = [aws_security_group.worker_mgmt.id]
-      asg_desired_capacity          = 1
+      name                 = "workers-2"
+      instance_type        = "t2.micro"
+      asg_desired_capacity = 1
     },
     {
-      name                          = "ba-worker-group-3"
-      instance_type                 = "t2.small"
-      additional_security_group_ids = [aws_security_group.worker_mgmt.id]
-      asg_desired_capacity          = 1
+      name                 = "workers-3"
+      instance_type        = "t2.small"
+      asg_desired_capacity = 1
     }
   ]
 }
 
 locals {
-  cluster_name = "ba-eks-${random_string.suffix.result}"
+  cluster_name = var.name_prefix
 }
 
-data "aws_eks_cluster" "cluster" {
+data "aws_eks_cluster" "this" {
   name = module.eks.cluster_id
 }
 
-data "aws_eks_cluster_auth" "cluster" {
+data "aws_eks_cluster_auth" "this" {
   name = module.eks.cluster_id
 }
