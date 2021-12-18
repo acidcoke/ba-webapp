@@ -1,29 +1,31 @@
 variable "aws_region" {
-  default = "eu-central-1"
+  type = string
 }
 
 variable "domain_name" {
+  type    = string
   default = "headless.kiwi"
 }
 
 variable "website_bucket_name" {
+  type    = string
   default = "headless.kiwi"
 }
 
 variable "mongodb_ingress_hostname" {
-  default = "mongodb://username:password@ad3a417b4b4d84d618e8dd8e6775fdc3-1076869512.eu-central-1.elb.amazonaws.com"
+  type = string
 }
 
-variable "mongo_secret" {
-
+variable "mongodb_secret" {
+  type = string
 }
 
 variable "vpc_id" {
-
+  type = string
 }
 
 variable "private_subnet_ids" {
-
+  type = list(string)
 }
 
 variable "name_prefix" {

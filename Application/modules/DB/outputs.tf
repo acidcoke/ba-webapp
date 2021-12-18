@@ -3,8 +3,8 @@ output "mongodb_ingress_hostname" {
   value       = module.kubernetes.mongodb_ingress_hostname
 }
 
-output "mongo_secret" {
-  value = module.aws.mongo_secret
+output "mongodb_secret" {
+  value = module.aws.mongodb_secret
 }
 
 output "vpc_id" {

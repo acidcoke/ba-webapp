@@ -1,16 +1,9 @@
-variable "region" {
-  default     = "eu-central-1"
-  description = "AWS region"
-}
-
 provider "aws" {
-  region = var.region
+  region = var.aws_region
 }
 
 data "aws_availability_zones" "available" {
 }
-
-
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
@@ -40,25 +33,6 @@ module "vpc" {
   }
 }
 
-resource "aws_security_group" "worker_mgmt" {
-  name_prefix = "${var.name_prefix}-WorkerManagement"
-  vpc_id      = module.vpc.vpc_id
-  ingress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
-  }
-  egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
-  }
-}
-
 resource "aws_security_group" "efs" {
   name_prefix = "${var.name_prefix}-EFS"
   vpc_id      = module.vpc.vpc_id
@@ -74,10 +48,6 @@ resource "aws_security_group" "efs" {
       "192.168.0.0/16",
     ]
   }
-}
-
-data "aws_security_group" "eks_cluster" {
-  id = module.eks.cluster_primary_security_group_id
 }
 
 resource "random_string" "username" {
@@ -111,7 +81,7 @@ resource "aws_secretsmanager_secret_version" "mongodb" {
 resource "aws_kms_key" "this" {}
 
 resource "aws_iam_role" "this" {
-  name_prefix = "${var.name_prefix}-kms-grant"
+  name_prefix = "${var.name_prefix}-KMSGrant"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -124,7 +94,6 @@ resource "aws_iam_role" "this" {
       }
     ]
   })
-
 }
 
 resource "aws_kms_grant" "this" {
@@ -133,8 +102,6 @@ resource "aws_kms_grant" "this" {
   grantee_principal = aws_iam_role.this.arn
   operations        = ["Encrypt", "Decrypt", "GenerateDataKey"]
 }
-
-
 
 resource "aws_efs_file_system" "this" {
   kms_key_id = aws_kms_key.this.arn
@@ -157,10 +124,9 @@ resource "aws_efs_backup_policy" "this" {
 
 
 module "eks" {
-  source                        = "terraform-aws-modules/eks/aws"
-  cluster_name                  = local.cluster_name
-  cluster_version               = "1.20"
-  cluster_create_security_group = true
+  source          = "terraform-aws-modules/eks/aws"
+  cluster_name    = local.cluster_name
+  cluster_version = "1.20"
   cluster_encryption_config = [
     {
       provider_key_arn = aws_kms_key.this.arn
@@ -168,27 +134,24 @@ module "eks" {
     }
   ]
 
+  vpc_id  = module.vpc.vpc_id
   subnets = module.vpc.private_subnets
 
-  vpc_id = module.vpc.vpc_id
-
-  workers_group_defaults = {
-    root_volume_type = "gp2"
-  }
+  workers_group_defaults = { root_volume_type = "gp2" }
 
   worker_groups = [
     {
+      name                 = "workers-0"
+      instance_type        = "t2.small"
+      asg_desired_capacity = 1
+    },
+    {
       name                 = "workers-1"
-      instance_type        = "t2.micro"
+      instance_type        = "t2.small"
       asg_desired_capacity = 1
     },
     {
       name                 = "workers-2"
-      instance_type        = "t2.micro"
-      asg_desired_capacity = 1
-    },
-    {
-      name                 = "workers-3"
       instance_type        = "t2.small"
       asg_desired_capacity = 1
     }

@@ -18,26 +18,12 @@ data "aws_subnet" "private" {
 
 resource "aws_security_group" "lambda" {
   name_prefix = "${var.name_prefix}-Lambda2Mongodb"
-  description = "allow lambda to connect to mongodb"
   vpc_id      = var.vpc_id
-}
-
-resource "aws_security_group_rule" "egress_mongodb" {
-  security_group_id = aws_security_group.lambda.id
-  type              = "egress"
-  from_port         = 27017
-  to_port           = 27017
-  protocol          = "TCP"
-  cidr_blocks       = ["0.0.0.0/0"]
-}
-
-resource "aws_security_group_rule" "egress_secretsmanager" {
-  security_group_id = aws_security_group.lambda.id
-  type              = "egress"
-  from_port         = 443
-  to_port           = 443
-  protocol          = "TCP"
-  cidr_blocks       = ["0.0.0.0/0"]
+  egress {
+    from_port = 443
+    to_port   = 27017
+    protocol  = "TCP"
+  }
 }
 
 /* SOURCE FOR LAMBDA */
@@ -69,7 +55,7 @@ resource "aws_lambda_function" "this" {
   environment {
     variables = {
       MONGO_BASE_URL = var.mongodb_ingress_hostname
-      SECRET_ARN     = var.mongo_secret
+      SECRET_ARN     = var.mongodb_secret
     }
   }
 }
@@ -132,7 +118,7 @@ resource "aws_iam_role_policy" "this" {
     Statement = [{
       Action   = "secretsmanager:GetSecretValue"
       Effect   = "Allow"
-      Resource = "${var.mongo_secret}"
+      Resource = "${var.mongodb_secret}"
       }
     ]
   })
@@ -157,10 +143,8 @@ resource "aws_apigatewayv2_stage" "this" {
   api_id      = aws_apigatewayv2_api.this.id
   name        = "${var.name_prefix}-lambda_stage"
   auto_deploy = true
-
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gw.arn
-
     format = jsonencode({
       requestId               = "$context.requestId"
       sourceIp                = "$context.identity.sourceIp"
@@ -213,7 +197,7 @@ resource "aws_cloudwatch_log_group" "api_gw" {
 # NETWORK FOR SECRETS MANAGER                                                              #
 ############################################################################################
 
-resource "aws_security_group" "this" {
+resource "aws_security_group" "secretsmanager" {
   name_prefix = "${var.name_prefix}-Secretsmanager"
   vpc_id      = var.vpc_id
   ingress {
@@ -222,17 +206,13 @@ resource "aws_security_group" "this" {
     protocol    = "TCP"
     cidr_blocks = data.aws_subnet.private[*].cidr_block
   }
-
-  tags = {
-    use = "secretsmanager"
-  }
 }
 
 resource "aws_vpc_endpoint" "this" {
   vpc_id              = var.vpc_id
   service_name        = "com.amazonaws.eu-central-1.secretsmanager"
   private_dns_enabled = true
-  security_group_ids  = resource.aws_security_group.this[*].id
+  security_group_ids  = resource.aws_security_group.secretsmanager[*].id
   subnet_ids          = var.private_subnet_ids
   vpc_endpoint_type   = "Interface"
 }

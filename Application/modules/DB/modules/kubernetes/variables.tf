@@ -1,3 +1,8 @@
+variable "aws_region" {
+  default     = "eu-central-1"
+  description = "AWS region"
+}
+
 variable "cluster_endpoint" {
   description = "host for a kubernetes provider"
   type        = string
@@ -13,11 +18,11 @@ variable "cluster_ca_certificate" {
   type        = string
 }
 
-variable "efs_example_fsid" {
+variable "efs_id" {
   type = string
 }
 
-variable "mongo_secret" {
+variable "mongodb_secret" {
 
 }
 
