@@ -1,28 +1,33 @@
-############################################################################################
-# PROVIDER CONFIGURATION                                                                   #
-############################################################################################
+#####################################################################
+# PROVIDER CONFIGURATION                                            #
+#####################################################################
 
 provider "aws" {
   region = var.aws_region
 }
 
-############################################################################################
-# LAMBDA CONFIGURATION                                                                     #
-############################################################################################
+#####################################################################
+# LAMBDA CONFIGURATION                                              #
+#####################################################################
 
-/* NETWORK FOR LAMBDA*/
-data "aws_subnet" "private" {
-  count = length(var.private_subnet_ids)
-  id    = var.private_subnet_ids[count.index]
+data "aws_vpc" "this" {
+  id = var.vpc_id
 }
 
 resource "aws_security_group" "lambda" {
-  name_prefix = "${var.name_prefix}-Lambda2Mongodb"
-  vpc_id      = var.vpc_id
+  name   = "${var.name_prefix}-Lambda"
+  vpc_id = var.vpc_id
   egress {
-    from_port = 443
-    to_port   = 27017
-    protocol  = "TCP"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "TCP"
+    cidr_blocks = [data.aws_vpc.this.cidr_block]
+  }
+  egress {
+    from_port   = 27017
+    to_port     = 27017
+    protocol    = "TCP"
+    cidr_blocks = [data.aws_vpc.this.cidr_block]
   }
 }
 
@@ -85,7 +90,7 @@ resource "aws_lambda_permission" "api_gw" {
 }
 
 resource "aws_iam_role" "this" {
-  name_prefix = "${var.name_prefix}-LambdaExecutionRole"
+  name = "${var.name_prefix}-LambdaExecutionRole"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -111,8 +116,8 @@ resource "aws_iam_role_policy_attachment" "lambda_vpc_access_execution" {
 }
 
 resource "aws_iam_role_policy" "this" {
-  name_prefix = "${var.name_prefix}-LambdaSecretAccessPolicy"
-  role        = aws_iam_role.this.id
+  name = "${var.name_prefix}-LambdaSecretAccessPolicy"
+  role = aws_iam_role.this.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -125,13 +130,13 @@ resource "aws_iam_role_policy" "this" {
 }
 
 
-############################################################################################
-# API CONFIGURATION                                                                        #
-############################################################################################
+#####################################################################
+# API CONFIGURATION                                                 #
+#####################################################################
 
 
 resource "aws_apigatewayv2_api" "this" {
-  name          = "${var.name_prefix}-lambda_api"
+  name          = "${var.name_prefix}-Lambda"
   protocol_type = "HTTP"
   cors_configuration {
     allow_origins = ["*"]
@@ -141,7 +146,7 @@ resource "aws_apigatewayv2_api" "this" {
 
 resource "aws_apigatewayv2_stage" "this" {
   api_id      = aws_apigatewayv2_api.this.id
-  name        = "${var.name_prefix}-lambda_stage"
+  name        = "${var.name_prefix}-Lambda"
   auto_deploy = true
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gw.arn
@@ -186,33 +191,6 @@ resource "aws_apigatewayv2_route" "get_entries" {
 }
 
 resource "aws_cloudwatch_log_group" "api_gw" {
-  name = "api_gw/${aws_apigatewayv2_api.this.name}"
-
+  name              = "api_gw/${aws_apigatewayv2_api.this.name}"
   retention_in_days = 30
-}
-
-
-
-############################################################################################
-# NETWORK FOR SECRETS MANAGER                                                              #
-############################################################################################
-
-resource "aws_security_group" "secretsmanager" {
-  name_prefix = "${var.name_prefix}-Secretsmanager"
-  vpc_id      = var.vpc_id
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "TCP"
-    cidr_blocks = data.aws_subnet.private[*].cidr_block
-  }
-}
-
-resource "aws_vpc_endpoint" "this" {
-  vpc_id              = var.vpc_id
-  service_name        = "com.amazonaws.eu-central-1.secretsmanager"
-  private_dns_enabled = true
-  security_group_ids  = resource.aws_security_group.secretsmanager[*].id
-  subnet_ids          = var.private_subnet_ids
-  vpc_endpoint_type   = "Interface"
 }

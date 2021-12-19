@@ -34,19 +34,14 @@ module "vpc" {
 }
 
 resource "aws_security_group" "efs" {
-  name_prefix = "${var.name_prefix}-EFS"
-  vpc_id      = module.vpc.vpc_id
+  name   = "${var.name_prefix}-EFS"
+  vpc_id = module.vpc.vpc_id
 
   ingress {
-    from_port = 2049
-    to_port   = 2049
-    protocol  = "tcp"
-
-    cidr_blocks = [
-      "10.0.0.0/8",
-      "172.16.0.0/12",
-      "192.168.0.0/16",
-    ]
+    from_port   = 2049
+    to_port     = 2049
+    protocol    = "tcp"
+    cidr_blocks = [module.vpc.vpc_cidr_block]
   }
 }
 
@@ -62,7 +57,7 @@ resource "random_password" "password" {
 # Now create secret and secret versions for database master account 
 
 resource "aws_secretsmanager_secret" "mongodb" {
-  name_prefix             = "${var.name_prefix}-mongodb"
+  name                    = "${var.name_prefix}-Mongodb"
   recovery_window_in_days = 0
 }
 
@@ -77,11 +72,31 @@ resource "aws_secretsmanager_secret_version" "mongodb" {
   )
 }
 
+resource "aws_security_group" "secretsmanager" {
+  name   = "${var.name_prefix}-Secretsmanager"
+  vpc_id = module.vpc.vpc_id
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "TCP"
+    cidr_blocks = [module.vpc.vpc_cidr_block]
+  }
+}
+
+resource "aws_vpc_endpoint" "this" {
+  vpc_id              = module.vpc.vpc_id
+  service_name        = "com.amazonaws.eu-central-1.secretsmanager"
+  private_dns_enabled = true
+  security_group_ids  = aws_security_group.secretsmanager[*].id
+  subnet_ids          = module.vpc.private_subnets
+  vpc_endpoint_type   = "Interface"
+}
+
 
 resource "aws_kms_key" "this" {}
 
 resource "aws_iam_role" "this" {
-  name_prefix = "${var.name_prefix}-KMSGrant"
+  name = "${var.name_prefix}-KMSGrant"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -133,9 +148,10 @@ module "eks" {
       resources        = ["secrets"]
     }
   ]
-
-  vpc_id  = module.vpc.vpc_id
-  subnets = module.vpc.private_subnets
+  worker_create_cluster_primary_security_group_rules = true
+  cluster_create_security_group                      = true
+  vpc_id                                             = module.vpc.vpc_id
+  subnets                                            = module.vpc.private_subnets
 
   workers_group_defaults = { root_volume_type = "gp2" }
 
