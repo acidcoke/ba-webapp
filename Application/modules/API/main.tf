@@ -14,7 +14,18 @@ data "aws_vpc" "this" {
   id = var.vpc_id
 }
 
-resource "aws_security_group" "lambda" {
+data "aws_subnets" "private" {
+  filter {
+    name   = "vpc-id"
+    values = [var.vpc_id]
+  }
+
+  tags = {
+    type = "private"
+  }
+}
+
+resource "aws_security_group" "this" {
   name   = "${var.name_prefix}-Lambda"
   vpc_id = var.vpc_id
   egress {
@@ -27,7 +38,7 @@ resource "aws_security_group" "lambda" {
     from_port   = 27017
     to_port     = 27017
     protocol    = "TCP"
-    cidr_blocks = [data.aws_vpc.this.cidr_block]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
@@ -38,6 +49,14 @@ data "archive_file" "this" {
 
   source_dir  = "${path.module}/code"
   output_path = "${path.module}/code.zip"
+}
+
+resource "aws_lambda_layer_version" "python37_pymongo" {
+  filename                 = "${path.module}/pymongo_layer.zip"
+  layer_name               = "Python37-pymongo"
+  source_code_hash         = filebase64sha256("${path.module}/pymongo_layer.zip")
+  compatible_runtimes      = ["python3.7"]
+  compatible_architectures = ["x86_64"]
 }
 
 resource "aws_lambda_function" "this" {
@@ -53,8 +72,8 @@ resource "aws_lambda_function" "this" {
   role   = aws_iam_role.this.arn
   layers = [aws_lambda_layer_version.python37_pymongo.arn]
   vpc_config {
-    subnet_ids         = var.private_subnet_ids
-    security_group_ids = [aws_security_group.lambda.id]
+    subnet_ids         = data.aws_subnets.private.ids
+    security_group_ids = [aws_security_group.this.id]
   }
 
   environment {
@@ -63,14 +82,6 @@ resource "aws_lambda_function" "this" {
       SECRET_ARN     = var.mongodb_secret
     }
   }
-}
-
-resource "aws_lambda_layer_version" "python37_pymongo" {
-  filename                 = "${path.module}/pymongo_layer.zip"
-  layer_name               = "Python37-pymongo"
-  source_code_hash         = filebase64sha256("${path.module}/pymongo_layer.zip")
-  compatible_runtimes      = ["python3.7"]
-  compatible_architectures = ["x86_64"]
 }
 
 /* LOGGING FOR LAMBDA */
@@ -105,12 +116,7 @@ resource "aws_iam_role" "this" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
-  role       = aws_iam_role.this.id
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_vpc_access_execution" {
+resource "aws_iam_role_policy_attachment" "this" {
   role       = aws_iam_role.this.id
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
