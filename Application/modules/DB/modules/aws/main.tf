@@ -57,7 +57,7 @@ resource "random_password" "password" {
 # Now create secret and secret versions for database master account 
 
 resource "aws_secretsmanager_secret" "mongodb" {
-  name                    = "${var.name_prefix}-Mongodb"
+  name_prefix             = "${var.name_prefix}-Mongodb"
   recovery_window_in_days = 0
 }
 
