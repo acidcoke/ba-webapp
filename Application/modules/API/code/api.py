@@ -22,10 +22,12 @@ def handler(event, context):
         uri = create_uri(secret, MONGO_BASE_URL)
         entries = MongoClient(uri).guestbook.entries
         if event['httpMethod'] == 'GET':
+            logging.info(f"Method: GET")
             entry_cursor = entries.find()
             logging.info(f"RESULT: {entry_cursor}")
             entry_cursor_list = list(entry_cursor)
             for cursor in entry_cursor_list:
+                logging.info(f"CURSOR: {cursor}")
                 del cursor['_id']
             json_data = bson.json_util.dumps(entry_cursor_list)
             return {
@@ -34,7 +36,9 @@ def handler(event, context):
             }
 
         elif event['httpMethod'] == 'POST':
+            logging.info(f"Method: POST")
             entry = json.loads(event['body'])
+            logging.info(f"ENTRY: {entry}")
             entry["date"] = time.time()
             result = entries.insert_one(entry)
             logging.info(f"RESULT: {result}")
@@ -59,4 +63,5 @@ def create_uri(secret, url):
     username = urllib.parse.quote_plus(secret['username'])
     password = urllib.parse.quote_plus(secret['password'])
     uri = f"mongodb://{username}:{password}@{url}"
+    logging.info(f"URI: {uri}")
     return uri
