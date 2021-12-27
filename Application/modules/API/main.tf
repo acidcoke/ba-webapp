@@ -139,12 +139,16 @@ resource "aws_iam_role_policy" "this" {
 #####################################################################
 # API CONFIGURATION                                                 #
 #####################################################################
-
+locals {
+  resource_path = "/entries"
+  route_target  = "integrations/${aws_apigatewayv2_integration.this.id}"
+}
 
 resource "aws_apigatewayv2_api" "this" {
   name          = "${var.name_prefix}-Lambda"
   protocol_type = "HTTP"
   cors_configuration {
+    # allow_origins = ["http://${var.website_bucket_name}.s3-website.${var.aws_region}.amazonaws.com"]
     allow_origins = ["*"]
     allow_methods = ["*"]
   }
@@ -179,10 +183,7 @@ resource "aws_apigatewayv2_integration" "this" {
   integration_method = "POST"
 }
 
-locals {
-  resource_path = "/entries"
-  route_target  = "integrations/${aws_apigatewayv2_integration.this.id}"
-}
+
 
 resource "aws_apigatewayv2_route" "create_entries" {
   api_id    = aws_apigatewayv2_api.this.id

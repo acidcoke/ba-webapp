@@ -6,12 +6,8 @@ variable "name_prefix" {
   type = string
 }
 
-variable "domain_name" {
-  default = "headless.kiwi"
-}
-
 variable "website_bucket_name" {
-  default = "headless.kiwi"
+  default = "ba.guestbook"
 }
 
 variable "api_route" {

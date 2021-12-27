@@ -17,3 +17,7 @@ variable "mongodb_ingress_hostname" {
 variable "mongodb_secret" {
   type = string
 }
+
+variable "website_bucket_name" {
+  default = "ba.guestbook"
+}

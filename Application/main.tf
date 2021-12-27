@@ -8,6 +8,7 @@ module "API" {
   mongodb_ingress_hostname = module.DB.mongodb_ingress_hostname
   mongodb_secret           = module.DB.mongodb_secret
 
+  website_bucket_name = var.website_bucket_name
 }
 
 module "Frontend" {
@@ -17,6 +18,8 @@ module "Frontend" {
   name_prefix = var.name_prefix
 
   api_route = module.API.api_route
+
+  website_bucket_name = var.website_bucket_name
 }
 
 module "DB" {

@@ -3,6 +3,9 @@ variable "name_prefix" {
 }
 
 variable "aws_region" {
-  default     = "eu-central-1"
-  description = "AWS region"
+  default = "eu-central-1"
+}
+
+variable "website_bucket_name" {
+  default = "ba.guestbook"
 }
