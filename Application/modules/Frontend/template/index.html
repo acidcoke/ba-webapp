@@ -20,14 +20,12 @@
 
     .p1 {
       font-family: "Times New Roman", Times, serif;
-      color: #7bcab1;
+      color: #181145;
     }
   </style>
 </head>
 
 <body>
-  <div id="demo"></div>
-  <br><br>
   <h1>Guestbook</h1>
   <form>
     <label for="name">Name:</label><br>
@@ -36,6 +34,7 @@
     <input type="text" id="comment" name="comment"><br><br>
   </form>
   <button type="button" id="b1">Submit</button>
+  <br>
   <div id="users"></div>
   <script>
     document.getElementById('b1').addEventListener('click', addEntry);
