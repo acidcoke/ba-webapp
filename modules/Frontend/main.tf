@@ -3,8 +3,12 @@ provider "aws" {
 }
 
 # AWS S3 Bucket for static hosting
+resource "random_pet" "this" {
+  length = 1
+}
+
 resource "aws_s3_bucket" "website" {
-  bucket = var.website_bucket_name
+  bucket = "${var.website_bucket_name}.${random_pet.this.id}"
   acl    = "public-read"
   cors_rule {
     allowed_headers = ["*"]
@@ -22,7 +26,7 @@ resource "aws_s3_bucket" "website" {
           AWS = "*"
         }
         Action   = "s3:GetObject"
-        Resource = "arn:aws:s3:::${var.website_bucket_name}/*"
+        Resource = "arn:aws:s3:::${var.website_bucket_name}.${random_pet.this.id}/*"
       }
     ]
     }

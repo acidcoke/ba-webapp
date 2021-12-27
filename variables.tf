@@ -7,5 +7,5 @@ variable "aws_region" {
 }
 
 variable "website_bucket_name" {
-  default = "ba.guestbook"
+  default = "guestbook"
 }
