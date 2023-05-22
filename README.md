@@ -1,30 +1,27 @@
-# Infrastructure-as-Code - Realisierung einer Webanwendung in der Public Cloud
-## Anmerkungen
-Diese Anwendung kann bis zu 1€/h kosten! Wenn sie nicht genutzt wird sollte die Infrastruktur zerstört werden.
+# Infrastructure-as-Code - Realization of a web application in the public cloud
+## Notes
+This application can cost up to 1€/h! If it is not used the infrastructure should be destroyed.
 
-## Voraussetzungen
-Um die Anwendung zu verwenden benötigen Sie:
+## Requirements
+To use the application you need:
 
-* Die installierte [Terraform CLI (1.0.9+)](https://www.terraform.io/downloads)
+* The installed [Terraform CLI (1.0.9+)](https://www.terraform.io/downloads)
+* The installed [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+* An [AWS account](https://console.aws.amazon.com/console/home?nc2=h_ct&src=header-signin)
+* Your AWS credentials. You can create a new access key on this [page](https://console.aws.amazon.com/iam/home?#/security_credentials)
 
-* Die installierte [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-
-* Ein [AWS-Konto](https://console.aws.amazon.com/console/home?nc2=h_ct&src=header-signin)
-* Ihre AWS-Anmeldedaten. Sie können auf dieser [Seite einen neuen Zugangsschlüssel erstellen](https://console.aws.amazon.com/iam/home?#/security_credentials)
-
-
-Konfigurieren Sie die AWS CLI von Ihrem Terminal aus. Folgen Sie den Aufforderungen zur Eingabe Ihrer AWS Access Key ID und Ihres Secret Access Key:
+Configure the AWS CLI from your terminal. Follow the prompts to enter your AWS Access Key ID and Secret Access Key:
 ```console
 $ aws configure
 ```
 
-## Nutzung der Anwendung
-1. Verzeichnis initialisieren:
+## Using the application
+1. Initialize directory:
       ```console
       $ terraform init
       ```
 
-2. Konfiguation anwenden:
+2. Apply config:
 
       ```console
       $ terraform apply
@@ -40,10 +37,10 @@ $ aws configure
       url = "guestbook.bobcat.s3-website.eu-central-1.amazonaws.com"
       ```
       
-      Über die zufällig generierte URL in der Konsolenausgabe kann die Anwendung aufgerufen werden.
+      The randomly generated URL in the console output can be used to invoke the application.
 
 
-3. Wenn die Anwendung nicht mehr benötigt wird kann sie zerstört werden:
+3. When the application is no longer needed it can be destroyed:
 
       ```console
       $ terraform destroy
@@ -52,4 +49,4 @@ $ aws configure
 
 ## Troubleshooting
 
-Falls die API mit dem http-Statuscode 500 antwortet, kann die Zerstörung und erneute Anwendung der Konfiguration behilflich sein.
+If the API responds with http status code 500, destroying and reapplying the configuration may help.
